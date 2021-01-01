@@ -1,15 +1,4 @@
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    init_logger();
-    run().await
-}
-
-async fn run() -> anyhow::Result<()> {
-    println!("Hello, world!");
-    Ok(())
-}
-
-fn init_logger() {
+pub fn init() {
     let log_filters = std::env::var("RUST_LOG").unwrap_or_default();
 
     pretty_env_logger::formatted_builder()

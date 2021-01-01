@@ -1,0 +1,51 @@
+pub mod context;
+pub mod handlers;
+pub mod prelude;
+pub mod response;
+pub mod routes;
+
+use std::sync::Arc;
+
+use serde::Serialize;
+use warp::{Filter, Reply};
+
+use prelude::*;
+
+const APPLICATION_NAME: &str = env!("CARGO_PKG_NAME");
+
+pub async fn start(settings: Arc<Settings>) {
+    let ctx = Context {
+        auth_service: Arc::new((AuthJwtService::new(settings.as_ref()))),
+    };
+
+    let cors = warp::cors()
+        .allow_any_origin()
+        .allow_header("Content-Type")
+        .allow_header("Authorization")
+        .allow_header("Content-Length")
+        .allow_header("Content-Disposition")
+        .allow_method("GET")
+        .allow_method("PUT")
+        .allow_method("POST")
+        .allow_method("DELETE")
+        .allow_method("OPTIONS")
+        .build();
+    let log = warp::log(APPLICATION_NAME);
+    let routes = routes::routes(ctx)
+        .recover(handle_rejection)
+        .with(log)
+        .with(cors);
+
+    warp::serve(routes).run(settings.address).await;
+}
+
+async fn handle_rejection(
+    err: warp::reject::Rejection,
+) -> Result<impl warp::reply::Reply, warp::reject::Rejection> {
+    // Adds here all service errors
+    if let Some(e) = err.find::<ErrorResponse>() {
+        Ok(e.as_response())
+    } else {
+        Err(err)
+    }
+}
