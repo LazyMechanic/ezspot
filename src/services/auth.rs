@@ -1,75 +1,89 @@
 use chrono::{Duration, Utc};
-use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation};
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-
-use crate::api::prelude::*;
 use futures::Future;
 use jsonwebtoken::errors::Error;
+use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use uuid::Uuid;
+
+use super::prelude::*;
+use crate::settings::Settings;
 
 const TOKEN_PREFIX: &str = "Bearer ";
 
 pub struct AuthJwtService {
+    clients: HashMap<ClientId, Client>,
     secret: String,
+    access_expires: i64,
+    refresh_expires: i64,
 }
 
 impl AuthJwtService {
     pub fn new(settings: &Settings) -> AuthJwtService {
         AuthJwtService {
-            secret: settings.jwt_secret.clone(),
+            clients: Default::default(),
+            secret: settings.auth.secret.clone(),
+            access_expires: settings.auth.access_expires,
+            refresh_expires: settings.auth.refresh_expires,
         }
     }
 
-    async fn validate(&self, claims: &Claims) -> Result<(), AuthError> {
-        // TODO: add validate
-        Ok(())
-    }
+    pub fn authorize(&self, token: &str) -> Result<Claims, AuthError> {
+        let claims =
+            decode_token(&self.secret, token).map_err(|err| AuthError::TokenDecodeError(err))?;
 
-    pub async fn authorize(&self, token: &str) -> Result<Claims, AuthError> {
-        let claims = match decode_token(&self.secret, token) {
-            Ok(ok) => ok,
-            Err(err) => return Err(AuthError::TokenDecodeError(err)),
-        };
-
-        match self.validate(&claims).await {
-            Ok(_) => { /* do nothing */ }
-            Err(err) => return Err(err),
+        // If access token expires
+        if Utc::now().timestamp() >= claims.exp {
+            return Err(AuthError::ValidateError("access token expires".to_string()));
         }
 
         Ok(claims)
     }
 
-    pub async fn encode(&self, user_id: Uuid, session: Uuid) -> Result<String, AuthError> {
-        let token = encode_token(&self.secret, user_id, session);
-        match token {
-            Ok(ok) => Ok(ok),
-            Err(err) => Err(AuthError::TokenEncodeError(err)),
-        }
+    pub fn encode(&self, user_id: ClientId, session: SessionId) -> Result<AccessToken, AuthError> {
+        encode_token(&self.secret, self.access_expires, user_id, session)
+            .map_err(|err| AuthError::TokenEncodeError(err))
     }
+
+    // pub fn login(&mut self, session: SessionId) -> Result<(AccessToken, RefreshToken), AuthError> {}
+}
+
+pub type AccessToken = String;
+pub type RefreshToken = String;
+
+pub type ClientId = Uuid;
+pub type SessionId = Uuid;
+
+#[derive(Debug)]
+pub struct Client {
+    pub id: ClientId,
+    pub fingerprint: String,
+    pub refresh_token: Uuid,
+    pub refresh_expires: i64,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Claims {
-    sub: Uuid,
     // seconds since the epoch
-    exp: u64,
-    session: Uuid,
+    exp: i64,
+    client_id: ClientId,
+    session: SessionId,
 }
 
 impl Claims {
-    fn new(user_id: Uuid, session: Uuid) -> Self {
+    fn new(exp: i64, client_id: ClientId, session: SessionId) -> Self {
         Self {
-            sub: user_id,
-            exp: (Utc::now() + Duration::days(1)).timestamp() as u64,
+            exp: (Utc::now() + Duration::seconds(exp)).timestamp(),
+            client_id,
             session,
         }
     }
 
-    pub fn user_id(&self) -> Uuid {
-        self.sub
+    pub fn client_id(&self) -> ClientId {
+        self.client_id
     }
 
-    pub fn session(&self) -> Uuid {
+    pub fn session(&self) -> SessionId {
         self.session
     }
 }
@@ -77,12 +91,13 @@ impl Claims {
 #[allow(dead_code)]
 fn encode_token(
     secret: &str,
-    user_id: Uuid,
-    session: Uuid,
-) -> Result<String, jsonwebtoken::errors::Error> {
+    exp: i64,
+    user_id: ClientId,
+    session: SessionId,
+) -> Result<AccessToken, jsonwebtoken::errors::Error> {
     let token = jsonwebtoken::encode(
         &Header::default(),
-        &Claims::new(user_id, session),
+        &Claims::new(exp, user_id, session),
         &EncodingKey::from_secret(secret.as_ref()),
     )?;
 

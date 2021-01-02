@@ -6,22 +6,25 @@ pub async fn get() -> ResponseJson {
         int_field: 69,
     };
 
-    log::trace!("{:?}", resp);
+    log::debug!("{:?}", resp);
     Ok(warp::reply::json(&resp))
 }
 
 pub async fn get_with_error() -> ResponseJson {
-    let resp = ErrorResponse::from(responses::Error::Error {
+    let err = responses::Error::Error {
         string_field: "string".to_string(),
         int_field: 42,
-    });
+    };
 
-    log::trace!("{:?}", resp);
-    Err(warp::reject::custom(resp))
+    log::debug!("{:?}", err);
+    Err(problem::pack_err(
+        http::StatusCode::INTERNAL_SERVER_ERROR,
+        err,
+    ))
 }
 
 pub async fn post(req: requests::PostRequest) -> ResponseCustom<impl warp::Reply> {
-    log::trace!("{:?}", req);
+    log::debug!("{:?}", req);
     Ok(warp::reply())
 }
 
@@ -46,7 +49,7 @@ pub mod responses {
 
     #[derive(thiserror::Error, Debug)]
     pub enum Error {
-        #[error("Second error: string_field={string_field:?}, int_field={int_field:?}")]
+        #[error("Second error: string_field={string_field}, int_field={int_field:?}")]
         Error {
             string_field: String,
             int_field: i64,

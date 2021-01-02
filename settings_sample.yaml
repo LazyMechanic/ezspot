@@ -1,2 +1,5 @@
 address: "127.0.0.1:8001"
-jwt_secret: "secret"
+auth:
+  secret: "secret"
+  access_expires: 900 # 15 mins
+  refresh_expires: 604800 # 7 days

@@ -5,7 +5,14 @@ use std::net::SocketAddr;
 #[derive(Debug, Clone, Deserialize)]
 pub struct Settings {
     pub address: SocketAddr,
-    pub jwt_secret: String,
+    pub auth: Auth,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct Auth {
+    pub secret: String,
+    pub access_expires: i64,
+    pub refresh_expires: i64,
 }
 
 impl Settings {

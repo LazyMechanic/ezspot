@@ -7,5 +7,3 @@ pub enum AuthError {
     #[error("Token validation error: {0:?}")]
     ValidateError(String),
 }
-
-impl warp::reject::Reject for AuthError {}

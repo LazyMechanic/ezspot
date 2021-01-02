@@ -1,6 +1,7 @@
 pub mod context;
 pub mod handlers;
 pub mod prelude;
+pub mod problem;
 pub mod response;
 pub mod routes;
 
@@ -32,20 +33,9 @@ pub async fn start(settings: Arc<Settings>) {
         .build();
     let log = warp::log(APPLICATION_NAME);
     let routes = routes::routes(ctx)
-        .recover(handle_rejection)
+        .recover(problem::unpack_err)
         .with(log)
         .with(cors);
 
     warp::serve(routes).run(settings.address).await;
-}
-
-async fn handle_rejection(
-    err: warp::reject::Rejection,
-) -> Result<impl warp::reply::Reply, warp::reject::Rejection> {
-    // Adds here all service errors
-    if let Some(e) = err.find::<ErrorResponse>() {
-        Ok(e.as_response())
-    } else {
-        Err(err)
-    }
 }
