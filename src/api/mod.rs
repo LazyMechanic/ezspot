@@ -1,7 +1,6 @@
 pub mod context;
 pub mod handlers;
 pub mod prelude;
-pub mod problem;
 pub mod response;
 pub mod routes;
 
@@ -33,7 +32,7 @@ pub async fn start(settings: Arc<Settings>) {
         .build();
     let log = warp::log(APPLICATION_NAME);
     let routes = routes::routes(ctx)
-        .recover(problem::unpack_err)
+        .recover(ErrorResponse::unpack)
         .with(log)
         .with(cors);
 

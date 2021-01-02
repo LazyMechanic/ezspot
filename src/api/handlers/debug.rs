@@ -10,17 +10,20 @@ pub async fn get() -> ResponseJson {
     Ok(warp::reply::json(&resp))
 }
 
-pub async fn get_with_error() -> ResponseJson {
+pub fn do_smth_with_error() -> Result<(), responses::Error> {
     let err = responses::Error::Error {
         string_field: "string".to_string(),
         int_field: 42,
     };
 
     log::debug!("{:?}", err);
-    Err(problem::pack_err(
-        http::StatusCode::INTERNAL_SERVER_ERROR,
-        err,
-    ))
+    Err(err)
+}
+
+pub async fn get_with_error() -> ResponseCustom<impl warp::Reply> {
+    do_smth_with_error().map_err(ErrorResponse::with_internal_error)?;
+
+    Ok(warp::reply())
 }
 
 pub async fn post(req: requests::PostRequest) -> ResponseCustom<impl warp::Reply> {

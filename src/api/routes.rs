@@ -63,9 +63,9 @@ mod filters {
             .and(warp::header::<String>("Authorization"))
             .and_then(
                 |auth_service: Arc<AuthJwtService>, header: String| async move {
-                    auth_service
-                        .authorize(&header)
-                        .map_err(|err| problem::pack_err(http::StatusCode::UNAUTHORIZED, err))
+                    auth_service.authorize(&header).map_err(|err| {
+                        ErrorResponse::with_status(http::StatusCode::UNAUTHORIZED, err)
+                    })
                 },
             )
     }
