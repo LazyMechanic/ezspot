@@ -3,3 +3,5 @@ auth:
   secret: "secret"
   access_expires: 900 # 15 mins
   refresh_expires: 604800 # 7 days
+session:
+  idle_time: 1800 # 30 mins

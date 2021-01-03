@@ -2,13 +2,13 @@ use warp::filters::BoxedFilter;
 use warp::Filter;
 
 use crate::api::prelude::*;
-use crate::api::routes::filters::healthcheck;
 
 pub fn routes(ctx: Context) -> BoxedFilter<(impl warp::Reply,)> {
     filters::healthcheck()
         .or(filters::debug_get())
         .or(filters::debug_get_with_error())
         .or(filters::debug_post())
+        .or(filters::auth_login(ctx.clone()))
         .boxed()
 }
 
@@ -27,24 +27,33 @@ mod filters {
     }
 
     pub fn debug_get() -> BoxedFilter<(impl warp::Reply,)> {
-        warp::path!("api" / "debug" / "get")
+        warp::path!("api" / "v1" / "debug" / "get")
             .and(warp::get())
             .and_then(handlers::debug::get)
             .boxed()
     }
 
     pub fn debug_get_with_error() -> BoxedFilter<(impl warp::Reply,)> {
-        warp::path!("api" / "debug" / "get_with_error")
+        warp::path!("api" / "v1" / "debug" / "get_with_error")
             .and(warp::get())
             .and_then(handlers::debug::get_with_error)
             .boxed()
     }
 
     pub fn debug_post() -> BoxedFilter<(impl warp::Reply,)> {
-        warp::path!("api" / "debug" / "post")
+        warp::path!("api" / "v1" / "debug" / "post")
             .and(warp::post())
             .and(warp::body::json())
             .and_then(handlers::debug::post)
+            .boxed()
+    }
+
+    pub fn auth_login(ctx: Context) -> BoxedFilter<(impl warp::Reply,)> {
+        warp::path!("api" / "v1" / "auth" / "login")
+            .and(warp::post())
+            .and(warp::body::json())
+            .and(with_context(ctx))
+            .and_then(handlers::auth::login)
             .boxed()
     }
 
@@ -63,7 +72,7 @@ mod filters {
             .and(warp::header::<String>("Authorization"))
             .and_then(
                 |auth_service: Arc<AuthJwtService>, header: String| async move {
-                    auth_service.authorize(&header).map_err(|err| {
+                    auth_service.authorize(&header).await.map_err(|err| {
                         ErrorResponse::with_status(http::StatusCode::UNAUTHORIZED, err)
                     })
                 },

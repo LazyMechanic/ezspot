@@ -6,6 +6,7 @@ use std::net::SocketAddr;
 pub struct Settings {
     pub address: SocketAddr,
     pub auth: Auth,
+    pub session: Session,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -13,6 +14,11 @@ pub struct Auth {
     pub secret: String,
     pub access_expires: i64,
     pub refresh_expires: i64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct Session {
+    pub idle_time: i64,
 }
 
 impl Settings {

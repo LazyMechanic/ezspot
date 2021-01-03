@@ -14,8 +14,15 @@ use prelude::*;
 const APPLICATION_NAME: &str = env!("CARGO_PKG_NAME");
 
 pub async fn start(settings: Arc<Settings>) {
-    let ctx = Context {
-        auth_service: Arc::new((AuthJwtService::new(settings.as_ref()))),
+    let ctx = {
+        let session_service = Arc::new(SessionService::new(settings.as_ref()));
+        let auth_service =
+            Arc::new((AuthJwtService::new(settings.as_ref(), Arc::clone(&session_service))));
+
+        Context {
+            session_service,
+            auth_service,
+        }
     };
 
     let cors = warp::cors()
