@@ -23,4 +23,8 @@ pub enum SessionError {
     SessionNotFound(SessionId),
     #[error("Wrong session password: id={0}")]
     WrongPassword(SessionId),
+    #[error("Generate password error: {0}")]
+    GeneratePasswordError(String),
+    #[error("Maximum number of sessions reached")]
+    MaxSessions,
 }

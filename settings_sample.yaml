@@ -5,3 +5,14 @@ auth:
   refresh_expires: 604800 # 7 days
 session:
   idle_time: 1800 # 30 mins
+  start_id: 100000
+  max_sessions: 899999 # 100'000 - 999'999
+  password:
+    length: 6 # example: 0xy12z
+    use_numbers: true
+    use_lowercase_letters: true
+    use_uppercase_letters: false
+    use_symbols: false
+    use_spaces: false
+    use_exclude_similar_characters: false
+    strict: true

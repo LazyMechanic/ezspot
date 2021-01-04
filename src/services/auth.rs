@@ -10,6 +10,7 @@ use super::prelude::*;
 use crate::settings::Settings;
 
 const TOKEN_PREFIX: &str = "Bearer ";
+pub const TOKEN_COOKIE_NAME: &str = "refreshToken";
 
 pub struct AuthJwtService {
     session_service: Arc<SessionService>,
@@ -194,6 +195,12 @@ impl Claims {
     pub fn session_id(&self) -> SessionId {
         self.session_id
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct Jwt {
+    pub access_token_decoded: Claims,
+    pub refresh_token: RefreshToken,
 }
 
 #[allow(dead_code)]

@@ -19,6 +19,21 @@ pub struct Auth {
 #[derive(Debug, Clone, Deserialize)]
 pub struct Session {
     pub idle_time: i64,
+    pub start_id: u64,
+    pub max_sessions: usize,
+    pub password: Password,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct Password {
+    pub length: usize,
+    pub use_numbers: bool,
+    pub use_lowercase_letters: bool,
+    pub use_uppercase_letters: bool,
+    pub use_symbols: bool,
+    pub use_spaces: bool,
+    pub use_exclude_similar_characters: bool,
+    pub strict: bool,
 }
 
 impl Settings {
