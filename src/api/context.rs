@@ -4,6 +4,7 @@ use crate::api::prelude::*;
 
 #[derive(Clone)]
 pub struct Context {
-    pub session_service: Arc<SessionService>,
-    pub auth_service: Arc<AuthJwtService>,
+    pub room_service: Arc<RoomService>,
+    pub auth_service: Arc<AuthService>,
+    pub ws_service: Arc<WebSocketService>,
 }

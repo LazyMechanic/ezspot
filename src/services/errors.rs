@@ -1,30 +1,27 @@
-use crate::services::auth::RefreshToken;
-use crate::services::session::SessionId;
-
 #[derive(thiserror::Error, Debug)]
 pub enum AuthError {
-    #[error("Token encoding error: {0:?}")]
-    TokenEncodeError(jsonwebtoken::errors::Error),
-    #[error("Token decoding error: {0:?}")]
-    TokenDecodeError(jsonwebtoken::errors::Error),
-    #[error("Authorization error: {0}")]
-    AuthorizationError(String),
     #[error(transparent)]
-    LoginError(#[from] SessionError),
-    #[error("Refresh tokens error: {0}")]
+    TokenEncodeError(jsonwebtoken::errors::Error),
+    #[error(transparent)]
+    TokenDecodeError(jsonwebtoken::errors::Error),
+    #[error("authorization error: {0}")]
+    AuthorizationError(String),
+    #[error("login error: {0}")]
+    LoginError(String),
+    #[error("refresh tokens error: {0}")]
     RefreshTokensError(String),
-    #[error("Logout error: {0}")]
+    #[error("logout error: {0}")]
     LogoutError(String),
+    #[error("create websocket ticket error: {0}")]
+    WsTicket(String),
 }
 
 #[derive(thiserror::Error, Debug)]
-pub enum SessionError {
-    #[error("Session not found: id={0}")]
-    SessionNotFound(SessionId),
-    #[error("Wrong session password: id={0}")]
-    WrongPassword(SessionId),
-    #[error("Generate password error: {0}")]
-    GeneratePasswordError(String),
-    #[error("Maximum number of sessions reached")]
-    MaxSessions,
+pub enum RoomError {
+    #[error("connect to room error: {0}")]
+    ConnectError(String),
+    #[error("disconnect from room error: {0}")]
+    DisconnectError(String),
+    #[error("create room error: {0}")]
+    CreateRoomError(String),
 }

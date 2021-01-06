@@ -6,8 +6,7 @@ pub mod routes;
 
 use std::sync::Arc;
 
-use serde::Serialize;
-use warp::{Filter, Reply};
+use warp::Filter;
 
 use prelude::*;
 
@@ -15,13 +14,17 @@ const APPLICATION_NAME: &str = env!("CARGO_PKG_NAME");
 
 pub async fn start(settings: Arc<Settings>) {
     let ctx = {
-        let session_service = Arc::new(SessionService::new(settings.as_ref()));
-        let auth_service =
-            Arc::new((AuthJwtService::new(settings.as_ref(), Arc::clone(&session_service))));
+        let room_service = Arc::new(RoomService::new(settings.as_ref()));
+        let auth_service = Arc::new(AuthService::new(
+            settings.as_ref(),
+            Arc::clone(&room_service),
+        ));
+        let ws_service = Arc::new(WebSocketService::new(settings.as_ref()));
 
         Context {
-            session_service,
+            room_service,
             auth_service,
+            ws_service,
         }
     };
 

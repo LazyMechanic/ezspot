@@ -21,7 +21,7 @@ pub fn do_smth_with_error() -> Result<(), responses::Error> {
 }
 
 pub async fn get_with_error() -> ResponseCustom<impl warp::Reply> {
-    do_smth_with_error().map_err(ErrorResponse::with_internal_error)?;
+    do_smth_with_error().map_err(ErrorResponse::err_with_internal_error)?;
 
     Ok(warp::reply())
 }

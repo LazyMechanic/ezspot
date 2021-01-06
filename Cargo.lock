@@ -320,6 +320,7 @@ dependencies = [
  "config",
  "cookie",
  "futures 0.3.8",
+ "futures-util",
  "http",
  "http-api-problem",
  "http-serde",

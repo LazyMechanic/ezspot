@@ -1,13 +1,16 @@
 address: "127.0.0.1:8001"
+environment: "dev" # "dev" | "prod"
 auth:
   secret: "secret"
+  ws_ticket_expires: 300 # 5 min
   access_expires: 900 # 15 mins
   refresh_expires: 604800 # 7 days
-session:
+room:
   idle_time: 1800 # 30 mins
   start_id: 100000
-  max_sessions: 899999 # 100'000 - 999'999
+  max_rooms: 1000000 # 100'000 - 1'100'000
   password:
+    expires: 60 # 1 min
     length: 6 # example: 0xy12z
     use_numbers: true
     use_lowercase_letters: true
@@ -16,3 +19,5 @@ session:
     use_spaces: false
     use_exclude_similar_characters: false
     strict: true
+ws:
+  max_connections: 65000

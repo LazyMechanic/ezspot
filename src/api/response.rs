@@ -1,6 +1,3 @@
-use serde::Serialize;
-use warp::Reply;
-
 use crate::api::prelude::*;
 
 // Regular `T` is `impl warp::Reply`
@@ -10,20 +7,41 @@ pub type ResponseJson = Result<warp::reply::Json, warp::reject::Rejection>;
 pub struct ErrorResponse;
 
 impl ErrorResponse {
-    pub fn with_internal_error<E>(err: E) -> warp::reject::Rejection
+    #[allow(dead_code)]
+    pub fn err_with_internal_error<E>(err: E) -> warp::reject::Rejection
     where
         E: std::error::Error + Send + Sync + 'static,
     {
-        ErrorResponse::with_status(http::StatusCode::INTERNAL_SERVER_ERROR, err)
+        ErrorResponse::err_with_status(http::StatusCode::INTERNAL_SERVER_ERROR, err)
     }
 
-    pub fn with_status<S, E>(status: S, err: E) -> warp::reject::Rejection
+    #[allow(dead_code)]
+    pub fn err_with_status<S, E>(status: S, err: E) -> warp::reject::Rejection
     where
         S: Into<http::StatusCode>,
         E: std::error::Error + Send + Sync + 'static,
     {
-        log::error!("internal error occurred: {:#}", err);
+        log::error!("internal error occurred: {:?}", err);
         warp::reject::custom(ApiError::with_cause(status, err))
+    }
+
+    #[allow(dead_code)]
+    pub fn msg_with_internal_error<M>(msg: M) -> warp::reject::Rejection
+    where
+        M: Into<String>,
+    {
+        ErrorResponse::msg_with_status(http::StatusCode::INTERNAL_SERVER_ERROR, msg)
+    }
+
+    #[allow(dead_code)]
+    pub fn msg_with_status<S, M>(status: S, msg: M) -> warp::reject::Rejection
+    where
+        S: Into<http::StatusCode>,
+        M: Into<String>,
+    {
+        let msg = msg.into();
+        log::error!("internal error occurred: {:?}", msg);
+        warp::reject::custom(ApiError::with_message(status, msg))
     }
 
     pub async fn unpack(
