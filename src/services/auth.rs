@@ -1,88 +1,87 @@
-use chrono::Utc;
+use chrono::{NaiveDateTime, Utc};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation};
 use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use serde::Serialize;
 use uuid::Uuid;
 
-use crate::services::utils;
-use crate::settings;
-use crate::settings::Settings;
+use crate::config;
+use crate::models::auth::*;
+use crate::models::room::RoomId;
+use crate::models::room::RoomPassword;
+use crate::repos::AuthRepo;
 
-use super::prelude::*;
+use super::local_prelude::*;
+use super::utils;
 
-const ACCESS_TOKEN_PREFIX: &str = "Bearer ";
-pub const REFRESH_TOKEN_COOKIE_NAME: &str = "refreshToken";
+const REFRESH_TOKEN_COOKIE_NAME: &str = "refreshToken";
 
 pub struct AuthService {
     room_service: Arc<RoomService>,
-    settings: settings::Auth,
-    clients: RwLock<HashMap<RefreshToken, Client>>,
+    cfg: config::Auth,
+    repo: Box<dyn AuthRepo + Send + Sync>,
 }
 
 impl AuthService {
-    pub fn new(settings: &Settings, room_service: Arc<RoomService>) -> AuthService {
+    pub fn new(
+        cfg: config::Auth,
+        repo: Box<dyn AuthRepo + Send + Sync>,
+        room_service: Arc<RoomService>,
+    ) -> AuthService {
         AuthService {
+            cfg,
+            repo,
             room_service,
-            settings: settings.auth.clone(),
-            clients: Default::default(),
         }
     }
 
-    pub async fn authorize<S>(&self, token: S) -> Result<Claims, AuthError>
+    pub fn refresh_token_cookie_name(&self) -> &'static str {
+        REFRESH_TOKEN_COOKIE_NAME
+    }
+
+    pub fn is_enable(&self) -> bool {
+        self.cfg.enable
+    }
+
+    pub async fn authorize<S1, S2>(
+        &self,
+        access_token_encoded: S1,
+        refresh_token_encoded: S2,
+    ) -> Result<(AccessTokenDecoded, RefreshTokenDecoded), ServiceError>
     where
-        S: AsRef<str>,
+        S1: AsRef<str>,
+        S2: AsRef<[u8]>,
     {
-        // Decode token to claims
-        let claims: Claims =
-            decode_token(&self.settings.secret, token).map_err(AuthError::TokenDecodeError)?;
+        let access_token_decoded =
+            AccessTokenDecoded::decode(&self.cfg.secret, access_token_encoded)
+                .map_err(|err| ServiceError::CommonError(err.into()))?;
+
+        let refresh_token_decoded = RefreshTokenDecoded::decode(refresh_token_encoded)
+            .map_err(|err| ServiceError::CommonError(err.into()))?;
 
         // If access token expires
-        if Utc::now().timestamp() >= claims.exp {
-            return Err(AuthError::AuthorizationError(
-                "access token expires".to_string(),
-            ));
+        if Utc::now().naive_utc() >= access_token_decoded.exp() {
+            return Err(ServiceError::AuthError(anyhow::anyhow!(
+                "access token expires"
+            )));
         }
 
-        Ok(claims)
+        Ok((access_token_decoded, refresh_token_decoded))
     }
 
-    pub async fn authorize_ws<S>(&self, ticket: S) -> Result<WebSocketTicketEntry, AuthError>
+    pub async fn authorize_ws<S>(&self, ticket: S) -> Result<WebSocketTicketDecoded, ServiceError>
     where
         S: AsRef<str>,
     {
         // Decode ticket to WebSocketTicketEntry
-        let ws_ticket: WebSocketTicketEntry =
-            decode_token(&self.settings.secret, ticket).map_err(AuthError::TokenDecodeError)?;
+        let ws_ticket = WebSocketTicketDecoded::decode(&self.cfg.secret, ticket)
+            .map_err(|err| ServiceError::CommonError(err.into()))?;
 
         // If ws ticket expires
-        if Utc::now().timestamp() >= ws_ticket.exp {
-            return Err(AuthError::AuthorizationError(
-                "websocket ticket expires".to_string(),
-            ));
+        if Utc::now().naive_utc() >= ws_ticket.exp() {
+            return Err(ServiceError::AuthError(anyhow::anyhow!(
+                "websocket ticket expires"
+            )));
         }
-
-        let mut clients = self.clients.write().await;
-
-        // Find client
-        let mut client = clients
-            .iter_mut()
-            .find_map(|(_, client)| {
-                if client.id == ws_ticket.client_id {
-                    Some(client)
-                } else {
-                    None
-                }
-            })
-            .ok_or_else(|| {
-                AuthError::AuthorizationError(format!(
-                    "client not found, client_id={}",
-                    ws_ticket.client_id
-                ))
-            })?;
-
-        // Delete ws ticket
-        client.ws_ticket = None;
 
         Ok(ws_ticket)
     }
@@ -92,286 +91,136 @@ impl AuthService {
         fingerprint: S,
         room_id: RoomId,
         room_password: RoomPassword,
-    ) -> Result<(AccessToken, RefreshTokenEntry), AuthError>
+    ) -> Result<(AccessTokenDecoded, RefreshTokenDecoded), ServiceError>
     where
         S: Into<String>,
     {
         // Create new client
-        let client = Client::new(
-            fingerprint,
-            utils::expires_timestamp(self.settings.refresh_expires),
-        );
+        let client = NewClient {
+            refresh_token: Uuid::new_v4(),
+            refresh_token_exp: utils::expires_timestamp(self.cfg.refresh_expires),
+            client_id: Uuid::new_v4(),
+            fingerprint: fingerprint.into(),
+        };
 
-        // Create access token
-        let access_token = encode_token(
-            &self.settings.secret,
-            &Claims::new(
-                utils::expires_timestamp(self.settings.access_expires),
-                client.id,
-                room_id,
-            ),
-        )
-        .map_err(AuthError::TokenEncodeError)?;
-
-        let refresh_token_entry = client.refresh_token_entry;
-
-        // Connect client to room
+        // Try to connect to room
         self.room_service
-            .connect(client.id, room_id, room_password)
-            .await
-            .map_err(|err| AuthError::LogoutError(err.to_string()))?;
+            .connect(room_id, client.client_id, room_password)
+            .await?;
 
         // Save new auth session
-        self.clients
-            .write()
-            .await
-            .insert(refresh_token_entry.token, client);
+        let client = self.repo.create_client(client).await?;
 
-        Ok((access_token, refresh_token_entry))
+        // Create access token
+        let access_token = AccessTokenDecoded::new(
+            self.cfg.secret.clone(),
+            utils::expires_timestamp(self.cfg.access_expires),
+            client.client_id,
+            room_id,
+        );
+
+        // Create refresh token
+        let refresh_token =
+            RefreshTokenDecoded::new(client.refresh_token, client.refresh_token_exp);
+
+        Ok((access_token, refresh_token))
     }
 
     pub async fn refresh_tokens<S>(
         &self,
         fingerprint: S,
         jwt: Jwt,
-    ) -> Result<(AccessToken, RefreshTokenEntry), AuthError>
+    ) -> Result<(AccessTokenDecoded, RefreshTokenDecoded), ServiceError>
     where
         S: Into<String>,
     {
         let fingerprint = fingerprint.into();
 
         // Remove client
-        let old_client = self
-            .clients
-            .write()
-            .await
-            .remove(&jwt.refresh_token)
-            .ok_or_else(|| {
-                AuthError::RefreshTokensError(format!(
-                    "client not found, refresh_token={}",
-                    jwt.refresh_token
-                ))
-            })?;
+        let old_client = self.repo.delete_client(jwt.refresh_token.token()).await?;
 
         // If refresh token expires
-        if Utc::now().timestamp() >= old_client.refresh_token_entry.exp {
-            return Err(AuthError::RefreshTokensError(
-                "refresh token expires".to_string(),
-            ));
+        if Utc::now().naive_utc() >= old_client.refresh_token_exp {
+            return Err(ServiceError::AuthError(anyhow::anyhow!(
+                "refresh token expires"
+            )));
         }
 
         // If old fingerprint and new are not equal
         if old_client.fingerprint != fingerprint {
-            return Err(AuthError::RefreshTokensError(
-                "fingerprints not equal".to_string(),
-            ));
+            return Err(ServiceError::AuthError(anyhow::anyhow!(
+                "fingerprints not equal"
+            )));
         }
 
         // Create new client
-        let new_client = Client {
-            id: old_client.id,
-            ws_ticket: old_client.ws_ticket,
-            fingerprint: old_client.fingerprint,
-            refresh_token_entry: RefreshTokenEntry::new(utils::expires_timestamp(
-                self.settings.refresh_expires,
-            )),
+        let new_client = NewClient {
+            refresh_token: Uuid::new_v4(),
+            refresh_token_exp: utils::expires_timestamp(self.cfg.refresh_expires),
+            client_id: old_client.client_id,
+            fingerprint,
         };
 
-        // Create new access token
-        let new_access_token = encode_token(
-            &self.settings.secret,
-            &Claims::new(
-                utils::expires_timestamp(self.settings.access_expires),
-                new_client.id,
-                jwt.claims.room_id,
-            ),
-        )
-        .map_err(AuthError::TokenEncodeError)?;
-
-        let new_refresh_token = new_client.refresh_token_entry;
-
         // Save new auth session
-        self.clients
-            .write()
-            .await
-            .insert(new_refresh_token.token, new_client);
+        let new_client = self.repo.create_client(new_client).await?;
+
+        // Create new access token
+        let new_access_token = AccessTokenDecoded::new(
+            self.cfg.secret.clone(),
+            utils::expires_timestamp(self.cfg.access_expires),
+            new_client.client_id,
+            jwt.access_token.room_id(),
+        );
+
+        // Create new refresh token
+        let new_refresh_token =
+            RefreshTokenDecoded::new(new_client.refresh_token, new_client.refresh_token_exp);
 
         Ok((new_access_token, new_refresh_token))
     }
 
-    pub async fn logout(&self, jwt: Jwt) -> Result<(), AuthError> {
-        let mut clients = self.clients.write().await;
-
-        // Get client
-        let client = clients.get(&jwt.refresh_token).ok_or_else(|| {
-            AuthError::LogoutError(format!(
-                "client not found, refresh_token={}",
-                jwt.refresh_token
-            ))
-        })?;
-
-        // If clients not eq (from token and from db)
-        if client.id != jwt.claims.client_id {
-            return Err(AuthError::LogoutError(
-                "client id in access token does not equal with client id in db".to_string(),
-            ));
-        }
-
+    pub async fn logout(&self, jwt: Jwt) -> Result<(), ServiceError> {
         // Disconnect from room
         self.room_service
-            .disconnect(jwt.claims.client_id, jwt.claims.room_id)
-            .await
-            .map_err(|err| AuthError::LogoutError(err.to_string()))?;
+            .disconnect(jwt.access_token.room_id(), jwt.access_token.client_id())
+            .await?;
+
+        // Get client
+        let client = self.repo.get_client(jwt.refresh_token.token()).await?;
+
+        // If clients not eq (from token and from db)
+        if client.client_id != jwt.access_token.client_id() {
+            return Err(ServiceError::AuthError(anyhow::anyhow!(
+                "client id in access token does not equal with client id in db"
+            )));
+        }
 
         // Delete auth session
-        clients.remove(&jwt.refresh_token);
+        self.repo.delete_client(jwt.refresh_token.token()).await?;
 
         Ok(())
     }
 
-    pub async fn ws_ticket(&self, jwt: Jwt) -> Result<WebSocketTicket, AuthError> {
-        let mut clients = self.clients.write().await;
-
-        // Find client
-        let mut client = clients.get_mut(&jwt.refresh_token).ok_or_else(|| {
-            AuthError::WsTicket(format!(
-                "client not found, refresh_token={}",
-                jwt.refresh_token
-            ))
-        })?;
+    pub async fn ws_ticket(&self, jwt: Jwt) -> Result<WebSocketTicketEncoded, ServiceError> {
+        // If access token expires
+        if Utc::now().naive_utc() >= jwt.access_token.exp() {
+            return Err(ServiceError::AuthError(anyhow::anyhow!(
+                "access token expires"
+            )));
+        }
 
         // Create ws ticket
-        let ticket = WebSocketTicketEntry::new(
-            utils::expires_timestamp(self.settings.ws_ticket_expires),
-            jwt.claims.client_id,
+        let ticket = WebSocketTicketDecoded::new(
+            self.cfg.secret.clone(),
+            utils::expires_timestamp(self.cfg.ws_ticket_expires),
+            jwt.access_token.client_id(),
         );
-        client.ws_ticket = Some(ticket.clone());
 
         // Encode it
-        let encoded_ticket =
-            encode_token(&self.settings.secret, &ticket).map_err(AuthError::TokenEncodeError)?;
+        let ticket_encoded = ticket
+            .encode()
+            .map_err(|err| ServiceError::CommonError(err.into()))?;
 
-        Ok(encoded_ticket)
+        Ok(ticket_encoded)
     }
-}
-
-pub type AccessToken = String;
-pub type RefreshToken = Uuid;
-pub type WebSocketTicket = String;
-
-#[derive(Debug, Clone)]
-struct Client {
-    pub id: ClientId,
-    pub ws_ticket: Option<WebSocketTicketEntry>,
-    pub fingerprint: String,
-    pub refresh_token_entry: RefreshTokenEntry,
-}
-
-impl Client {
-    pub fn new<S: Into<String>>(fingerprint: S, refresh_token_expires: i64) -> Client {
-        let id = Uuid::new_v4();
-        let fingerprint = fingerprint.into();
-        let refresh_token_entry = RefreshTokenEntry::new(refresh_token_expires);
-
-        Client {
-            id,
-            ws_ticket: None,
-            fingerprint,
-            refresh_token_entry,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct RefreshTokenEntry {
-    pub token: RefreshToken,
-    pub exp: i64,
-}
-
-impl RefreshTokenEntry {
-    pub fn new(exp: i64) -> RefreshTokenEntry {
-        RefreshTokenEntry {
-            token: Uuid::new_v4(),
-            exp,
-        }
-    }
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
-pub struct Claims {
-    // seconds since the epoch
-    exp: i64,
-    client_id: ClientId,
-    room_id: RoomId,
-}
-
-impl Claims {
-    fn new(exp: i64, client_id: ClientId, room_id: RoomId) -> Self {
-        Self {
-            exp,
-            client_id,
-            room_id,
-        }
-    }
-
-    pub fn client_id(&self) -> ClientId {
-        self.client_id
-    }
-
-    pub fn room_id(&self) -> RoomId {
-        self.room_id
-    }
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq, Hash)]
-pub struct WebSocketTicketEntry {
-    // seconds since the epoch
-    pub exp: i64,
-    pub client_id: ClientId,
-}
-
-impl WebSocketTicketEntry {
-    fn new(exp: i64, client_id: ClientId) -> Self {
-        Self { exp, client_id }
-    }
-
-    pub fn client_id(&self) -> ClientId {
-        self.client_id
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Jwt {
-    pub claims: Claims,
-    pub refresh_token: RefreshToken,
-}
-
-fn encode_token<S, T>(secret: S, token_decoded: &T) -> Result<String, jsonwebtoken::errors::Error>
-where
-    S: AsRef<str>,
-    T: Serialize,
-{
-    let token = jsonwebtoken::encode(
-        &Header::default(),
-        token_decoded,
-        &EncodingKey::from_secret(secret.as_ref().as_bytes()),
-    )?;
-
-    Ok(token)
-}
-
-fn decode_token<T, S1, S2>(secret: S1, token: S2) -> Result<T, jsonwebtoken::errors::Error>
-where
-    T: DeserializeOwned,
-    S1: AsRef<str>,
-    S2: AsRef<str>,
-{
-    let claims = jsonwebtoken::decode::<T>(
-        token.as_ref().trim_start_matches(ACCESS_TOKEN_PREFIX),
-        &DecodingKey::from_secret(secret.as_ref().as_bytes()),
-        &Validation::default(),
-    )
-    .map(|token_data| token_data.claims)?;
-
-    Ok(claims)
 }

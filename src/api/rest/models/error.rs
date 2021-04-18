@@ -1,18 +1,16 @@
-use crate::api::prelude::*;
+use http_api_problem::ApiError;
+use http_api_problem::HttpApiProblem;
+use http_api_problem::PROBLEM_JSON_MEDIA_TYPE;
 
-// Regular `T` is `impl warp::Reply`
-pub type ResponseCustom<T> = Result<T, warp::reject::Rejection>;
-pub type ResponseJson = Result<warp::reply::Json, warp::reject::Rejection>;
+pub struct Error;
 
-pub struct ErrorResponse;
-
-impl ErrorResponse {
+impl Error {
     #[allow(dead_code)]
     pub fn err_with_internal_error<E>(err: E) -> warp::reject::Rejection
     where
         E: std::error::Error + Send + Sync + 'static,
     {
-        ErrorResponse::err_with_status(http::StatusCode::INTERNAL_SERVER_ERROR, err)
+        Error::err_with_status(http::StatusCode::INTERNAL_SERVER_ERROR, err)
     }
 
     #[allow(dead_code)]
@@ -30,7 +28,7 @@ impl ErrorResponse {
     where
         M: Into<String>,
     {
-        ErrorResponse::msg_with_status(http::StatusCode::INTERNAL_SERVER_ERROR, msg)
+        Error::msg_with_status(http::StatusCode::INTERNAL_SERVER_ERROR, msg)
     }
 
     #[allow(dead_code)]

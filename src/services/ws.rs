@@ -1,15 +1,12 @@
-use super::prelude::*;
-use crate::settings;
-use crate::settings::Settings;
+use crate::config;
+use crate::services::local_prelude::*;
 
 pub struct WebSocketService {
-    settings: settings::Ws,
+    cfg: config::Ws,
 }
 
 impl WebSocketService {
-    pub fn new(settings: &Settings) -> WebSocketService {
-        WebSocketService {
-            settings: settings.ws.clone(),
-        }
+    pub fn new(cfg: config::Ws) -> WebSocketService {
+        WebSocketService { cfg }
     }
 }

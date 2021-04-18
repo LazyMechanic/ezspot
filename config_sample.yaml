@@ -1,0 +1,46 @@
+server:
+  addr: "127.0.0.1:8001"
+  env: "dev" # "dev" | "prod"
+auth:
+  enable: true
+  secret: "secret"
+  ws_ticket_expires: 300 # 5 min
+  access_expires: 900 # 15 min
+  refresh_expires: 86400 # 1 day
+room:
+  idle_time: 1800 # 30 min
+  start_id: 100000
+  max_rooms: 1000000 # 100'000 - 1'100'000
+  password:
+    expires: 60 # 1 min
+    length: 6 # example: 0xy12z
+    use_numbers: true
+    use_lowercase_letters: true
+    use_uppercase_letters: false
+    use_symbols: false
+    use_spaces: false
+    use_exclude_similar_characters: false
+    strict: true
+ws:
+  max_connections: 65000
+logger:
+  appenders:
+    stdout:
+      kind: console
+      encoder:
+        pattern: "{d(%Y-%m-%d %H:%M:%S %Z)(utc)} - {h({l})} {M} = {m} {n}"
+  root:
+    level: error
+    appenders:
+      - stdout
+  loggers:
+    ezspot:
+      level: debug
+      appenders:
+        - stdout
+      additive: false
+    ezspot_lib:
+      level: debug
+      appenders:
+        - stdout
+      additive: false

@@ -1,5 +1,5 @@
-use chrono::{Duration, Utc};
+use chrono::{Duration, NaiveDateTime, Utc};
 
-pub fn expires_timestamp(sec_duration: i64) -> i64 {
-    (Utc::now() + Duration::seconds(sec_duration)).timestamp()
+pub fn expires_timestamp(sec_duration: i64) -> NaiveDateTime {
+    (Utc::now() + Duration::seconds(sec_duration)).naive_utc()
 }
