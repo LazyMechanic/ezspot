@@ -3,12 +3,11 @@ use time::Duration;
 
 use crate::api::rest::prelude::*;
 use crate::models::auth::{Jwt, RefreshTokenDecoded};
-use thiserror::private::AsDynError;
 
 pub async fn login(
     ctx: Context,
     req: api_models::auth::LoginRequest,
-) -> api_models::CustomResponse<impl warp::Reply> {
+) -> CustomResponse<impl warp::Reply> {
     log::debug!("login, req={:?}", req);
 
     let (access_token, refresh_token) = ctx
@@ -35,7 +34,7 @@ pub async fn refresh_tokens(
     ctx: Context,
     jwt: Jwt,
     req: api_models::auth::RefreshTokensRequest,
-) -> api_models::CustomResponse<impl warp::Reply> {
+) -> CustomResponse<impl warp::Reply> {
     log::debug!("refresh tokens, jwt={:?}, req={:?}", jwt, req);
 
     let (access_token, refresh_token) = ctx
@@ -54,6 +53,27 @@ pub async fn refresh_tokens(
         refresh_token,
         ctx.auth_service.refresh_token_cookie_name(),
     )?;
+
+    Ok(reply)
+}
+
+pub async fn ws_ticket(ctx: Context, jwt: Jwt) -> JsonResponse {
+    log::debug!("websocket ticket, jwt={:?}", jwt);
+
+    let ticket =
+        ctx.auth_service.ws_ticket(jwt).await.map_err(|err| {
+            api_models::Error::err_with_status(http::StatusCode::UNAUTHORIZED, err)
+        })?;
+
+    // Encode it
+    let ticket_encoded = ticket
+        .encode()
+        .map_err(api_models::Error::err_with_internal_error)?;
+
+    let reply = api_models::auth::WsTicket {
+        ticket: ticket_encoded,
+    }
+    .into_json();
 
     Ok(reply)
 }

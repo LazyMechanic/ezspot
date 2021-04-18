@@ -2,6 +2,7 @@ mod auth;
 mod debug;
 mod health_check;
 mod middleware;
+mod ws;
 
 use crate::api::rest::prelude::*;
 
@@ -10,7 +11,8 @@ pub fn routes(ctx: Context) -> BoxedFilter<(impl warp::Reply,)> {
         .and(
             health_check::routes()
                 .or(debug::routes())
-                .or(auth::routes(ctx)),
+                .or(auth::routes(ctx.clone()))
+                .or(ws::routes(ctx)),
         )
         .boxed()
 }

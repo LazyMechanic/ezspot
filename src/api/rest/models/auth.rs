@@ -19,3 +19,8 @@ pub struct LoginResponse {
 pub struct RefreshTokensResponse {
     pub access_token: String,
 }
+
+#[derive(serde::Serialize, Debug)]
+pub struct WsTicket {
+    pub ticket: String,
+}

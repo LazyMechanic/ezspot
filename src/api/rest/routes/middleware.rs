@@ -1,5 +1,5 @@
 use crate::api::rest::prelude::*;
-use crate::models::auth::Jwt;
+use crate::models::auth::{Jwt, WebSocketTicketDecoded};
 use crate::services::auth::AuthService;
 
 use std::sync::Arc;
@@ -85,6 +85,31 @@ pub fn with_auth_jwt(
              header: Option<String>| async move {
                 let jwt = auth(auth_service, cookie, header).await?;
                 Result::<_, warp::reject::Rejection>::Ok(jwt)
+            },
+        )
+}
+
+pub fn with_ws_ticket(
+    ctx: Context,
+) -> impl Filter<Extract = (WebSocketTicketDecoded,), Error = warp::reject::Rejection> + Clone {
+    use serde::Deserialize;
+
+    #[derive(Deserialize, Debug)]
+    pub struct WebSocketTicketQuery {
+        pub ticket: String,
+    }
+
+    warp::any()
+        .map(move || Arc::clone(&ctx.auth_service))
+        .and(warp::query())
+        .and_then(
+            |auth_service: Arc<AuthService>, query: WebSocketTicketQuery| async move {
+                auth_service
+                    .authorize_ws(query.ticket)
+                    .await
+                    .map_err(|err| {
+                        api_models::Error::err_with_status(http::StatusCode::UNAUTHORIZED, err)
+                    })?;
             },
         )
 }

@@ -201,7 +201,7 @@ impl AuthService {
         Ok(())
     }
 
-    pub async fn ws_ticket(&self, jwt: Jwt) -> Result<WebSocketTicketEncoded, ServiceError> {
+    pub async fn ws_ticket(&self, jwt: Jwt) -> Result<WebSocketTicketDecoded, ServiceError> {
         // If access token expires
         if Utc::now().naive_utc() >= jwt.access_token.exp() {
             return Err(ServiceError::AuthError(anyhow::anyhow!(
@@ -216,11 +216,6 @@ impl AuthService {
             jwt.access_token.client_id(),
         );
 
-        // Encode it
-        let ticket_encoded = ticket
-            .encode()
-            .map_err(|err| ServiceError::CommonError(err.into()))?;
-
-        Ok(ticket_encoded)
+        Ok(ticket)
     }
 }
