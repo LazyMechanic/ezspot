@@ -4,13 +4,13 @@ version = "0.1.0"
 authors = ["LazyMechanic <AsharnRus@gmail.com>"]
 edition = "2018"
 
-[lib]
-name = "ezspot_lib"
-path = "src/lib.rs"
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+actix-web = "3"
+actix-rt = "2"
+actix-service = "1"
+
 anyhow = "1.0"
 async-trait = "0.1"
 base64 = "0.13"
@@ -20,7 +20,7 @@ cookie = "0.15"
 clap = "3.0.0-beta.2"
 http = "0.2"
 http-serde = "1.0"
-http-api-problem = { version = "0.21.0", features = ["default", "api-error", "warp"] }
+http-api-problem = { version = "0.50", features = ["default", "api-error", "actix-web"] }
 jsonwebtoken = "7.2"
 log = { version = "0.4", features = ["std", "serde"] }
 log4rs = "1.0"

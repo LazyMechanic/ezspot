@@ -1,28 +1,26 @@
 pub mod handlers;
-pub mod models;
-pub mod routes;
 
 mod prelude;
 
-use crate::config::Config;
-use prelude::*;
-
+use actix_web::{middleware, web, App, HttpServer};
 use std::net::{Ipv4Addr, SocketAddr};
 
-pub async fn run(ctx: Context, cfg: Config) {
-    let cors = warp::cors()
-        .allow_any_origin()
-        .allow_method("GET")
-        .allow_method("PUT")
-        .allow_method("POST")
-        .allow_method("DELETE")
-        .allow_method("OPTIONS")
-        .build();
-    let log = warp::log("ezspot::api");
-    let routes = routes::routes(ctx)
-        .with(log)
-        .with(cors)
-        .recover(models::Error::unpack);
+use crate::api::context::Context;
+use crate::config::Config;
 
-    warp::serve(routes).run(cfg.server.addr).await;
+pub async fn run(ctx: Context, cfg: Config) -> std::io::Result<()> {
+    HttpServer::new(move || {
+        App::new()
+            // enable logger
+            .wrap(middleware::Logger::default())
+            // limit size of the payload (global configuration)
+            .data(ctx.clone())
+            .data(web::JsonConfig::default().limit(4096))
+            .service(web::scope("/api").configure(handlers::health_check::service_config))
+    })
+    .bind(cfg.server.addr)?
+    .run()
+    .await
 }
+
+pub type ApiResult = std::result::Result<web::HttpResponse, http_api_problem::ApiError>;
