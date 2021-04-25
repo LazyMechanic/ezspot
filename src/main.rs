@@ -1,10 +1,10 @@
-mod api;
-mod cli;
-mod config;
-mod infra;
-mod models;
-mod repos;
-mod services;
+pub mod api;
+pub mod cli;
+pub mod config;
+pub mod infra;
+pub mod models;
+pub mod repos;
+pub mod services;
 
 use crate::api::context::Context;
 use crate::cli::Cli;

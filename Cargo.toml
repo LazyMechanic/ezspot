@@ -9,7 +9,6 @@ edition = "2018"
 [dependencies]
 actix-web = "3"
 actix-rt = "2"
-actix-service = "1"
 
 anyhow = "1.0"
 async-trait = "0.1"
