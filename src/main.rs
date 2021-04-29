@@ -1,18 +1,21 @@
-pub mod TEST;
+pub mod adapter;
+pub mod app;
 pub mod cli;
 pub mod config;
+pub mod domain;
+pub mod infra;
+pub mod port;
 
 use crate::cli::Cli;
 use crate::config::Config;
-use TEST::*;
 
-use crate::TEST::adapter::auth::repo::AuthRepoSled;
-use crate::TEST::adapter::example::repo::ExampleRepoSled;
-use crate::TEST::adapter::room::repo::RoomRepoSled;
-use crate::TEST::domain::auth::AuthServiceImpl;
-use crate::TEST::domain::example::ExampleServiceImpl;
-use crate::TEST::domain::room::RoomServiceImpl;
-use futures::prelude::*;
+use crate::adapter::auth::repo::AuthRepoSled;
+use crate::adapter::example::repo::ExampleRepoSled;
+use crate::adapter::room::repo::RoomRepoSled;
+use crate::domain::auth::AuthServiceImpl;
+use crate::domain::example::ExampleServiceImpl;
+use crate::domain::room::RoomServiceImpl;
+
 use std::sync::Arc;
 
 #[actix_web::main]
