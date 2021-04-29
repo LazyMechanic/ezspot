@@ -18,5 +18,5 @@ pub fn routes(ctx: Context) -> BoxedFilter<(impl warp::Reply,)> {
 }
 
 fn base_path() -> BoxedFilter<()> {
-    warp::path("api").boxed()
+    warp::path("rest").boxed()
 }

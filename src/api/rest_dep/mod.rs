@@ -18,7 +18,7 @@ pub async fn run(ctx: Context, cfg: Config) {
         .allow_method("DELETE")
         .allow_method("OPTIONS")
         .build();
-    let log = warp::log("ezspot::api");
+    let log = warp::log("ezspot::rest");
     let routes = routes::routes(ctx)
         .with(log)
         .with(cors)

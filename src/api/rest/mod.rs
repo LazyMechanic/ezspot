@@ -3,11 +3,13 @@
 pub mod test_utils;
 
 pub mod handlers;
+pub mod middleware;
 pub mod models;
 
 mod prelude;
 
-use actix_web::{middleware, web, App, HttpServer};
+use actix_web::{middleware as actix_middleware, web, App, HttpServer};
+use std::sync::Arc;
 
 use crate::api::context::Context;
 use crate::config::Config;
@@ -16,12 +18,18 @@ pub async fn run(ctx: Context, cfg: Config) -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             // enable logger
-            .wrap(middleware::Logger::default())
+            .wrap(actix_middleware::Logger::default())
+            .wrap(
+                middleware::auth::JwtAuth::default()
+                    .exclude_regex(".*/auth/login")
+                    .exclude_regex(".*/example.*")
+                    .exclude_regex(".*/health-check.*"),
+            )
             // limit size of the payload (global configuration)
             .data(ctx.clone())
             .data(web::JsonConfig::default().limit(4096))
             .service(
-                web::scope("/api")
+                web::scope("/rest")
                     .configure(handlers::health_check::service_config)
                     .configure(handlers::debug::service_config),
             )

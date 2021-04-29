@@ -10,7 +10,7 @@ pub fn service_config(cfg: &mut web::ServiceConfig) {
         .service(post);
 }
 
-#[actix_web::get("/v1/debug/get-query")]
+#[actix_web::get("/v1/example/get-query")]
 async fn get_query(req: web::Query<api_models::debug::GetRequest>) -> ApiResult {
     log::debug!("request: {:?}", req);
 
@@ -24,7 +24,7 @@ async fn get_query(req: web::Query<api_models::debug::GetRequest>) -> ApiResult 
     Ok(HttpResponse::Ok().json(resp))
 }
 
-#[actix_web::get("/v1/debug/get-params/{string_field}/{int_field}")]
+#[actix_web::get("/v1/example/get-params/{string_field}/{int_field}")]
 async fn get_params(req: web::Path<api_models::debug::GetRequest>) -> ApiResult {
     log::debug!("request: {:?}", req);
 
@@ -38,7 +38,7 @@ async fn get_params(req: web::Path<api_models::debug::GetRequest>) -> ApiResult 
     Ok(HttpResponse::Ok().json(resp))
 }
 
-#[actix_web::get("/v1/debug/get-error/{kind}")]
+#[actix_web::get("/v1/example/get-error/{kind}")]
 async fn get_error(req: web::Path<api_models::debug::GetErrorRequest>) -> ApiResult {
     log::debug!("request: {:?}", req);
 
@@ -54,7 +54,7 @@ async fn get_error(req: web::Path<api_models::debug::GetErrorRequest>) -> ApiRes
     Err(resp)
 }
 
-#[actix_web::post("/v1/debug/post")]
+#[actix_web::post("/v1/example/post")]
 async fn post(req: web::Json<api_models::debug::PostRequest>) -> ApiResult {
     log::debug!("request: {:?}", req);
 
@@ -129,7 +129,7 @@ mod tests {
             Test {
                 case: Case {
                     req: test::TestRequest::get().uri(&format!(
-                        "/v1/debug/get-query?{}={}&{}={}",
+                        "/v1/example/get-query?{}={}&{}={}",
                         "string_field", "string", "int_field", 777
                     )),
                 },
@@ -145,7 +145,7 @@ mod tests {
             Test {
                 case: Case {
                     req: test::TestRequest::get()
-                        .uri(&format!("/v1/debug/get-params/{}/{}", "string", 777)),
+                        .uri(&format!("/v1/example/get-params/{}/{}", "string", 777)),
                 },
                 exp: Expected {
                     status: http::StatusCode::OK,
@@ -159,7 +159,7 @@ mod tests {
             Test {
                 case: Case {
                     req: test::TestRequest::get().uri(&format!(
-                        "/v1/debug/get-error/{}",
+                        "/v1/example/get-error/{}",
                         api_models::debug::ErrorKind::StructError.to_string()
                     )),
                 },
@@ -180,7 +180,7 @@ mod tests {
             Test {
                 case: Case {
                     req: test::TestRequest::get().uri(&format!(
-                        "/v1/debug/get-error/{}",
+                        "/v1/example/get-error/{}",
                         api_models::debug::ErrorKind::TupleError.to_string()
                     )),
                 },
@@ -200,7 +200,7 @@ mod tests {
             },
             Test {
                 case: Case {
-                    req: test::TestRequest::post().uri("/v1/debug/post").set_json(
+                    req: test::TestRequest::post().uri("/v1/example/post").set_json(
                         &api_models::debug::PostRequest {
                             string_field: "string".to_string(),
                             int_field: 777,

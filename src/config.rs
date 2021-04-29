@@ -26,9 +26,8 @@ pub enum Environment {
 
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct Auth {
-    pub enable: bool,
+    pub enabled: bool,
     pub secret: String,
-    pub ws_ticket_expires: i64,
     pub access_expires: i64,
     pub refresh_expires: i64,
 }
@@ -72,12 +71,12 @@ fn default_logger() -> serde_yaml::Value {
         - stdout
     loggers:
       ezspot:
-        level: debug
+        level: example
         appenders:
           - stdout
         additive: false
       ezspot_lib:
-        level: debug
+        level: example
         appenders:
           - stdout
         additive: false
@@ -148,12 +147,12 @@ impl Default for Config {
               - stdout
           loggers:
             ezspot:
-              level: debug
+              level: example
               appenders:
                 - stdout
               additive: false
             ezspot_lib:
-              level: debug
+              level: example
               appenders:
                 - stdout
               additive: false

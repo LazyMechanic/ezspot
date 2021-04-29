@@ -14,6 +14,7 @@ use super::local_prelude::*;
 use super::utils;
 
 const REFRESH_TOKEN_COOKIE_NAME: &str = "refreshToken";
+const ACCESS_TOKEN_HEADER_NAME: &str = "Authorization";
 
 pub struct AuthService {
     room_service: Arc<RoomService>,
@@ -38,6 +39,10 @@ impl AuthService {
         REFRESH_TOKEN_COOKIE_NAME
     }
 
+    pub fn access_token_header_name(&self) -> &'static str {
+        ACCESS_TOKEN_HEADER_NAME
+    }
+
     pub fn is_enable(&self) -> bool {
         self.cfg.enable
     }
@@ -46,7 +51,7 @@ impl AuthService {
         &self,
         access_token_encoded: S1,
         refresh_token_encoded: S2,
-    ) -> Result<(AccessTokenDecoded, RefreshTokenDecoded), ServiceError>
+    ) -> Result<Jwt, ServiceError>
     where
         S1: AsRef<str>,
         S2: AsRef<[u8]>,
@@ -65,7 +70,12 @@ impl AuthService {
             )));
         }
 
-        Ok((access_token_decoded, refresh_token_decoded))
+        let res = Jwt {
+            access_token: access_token_decoded,
+            refresh_token: refresh_token_decoded,
+        };
+
+        Ok(res)
     }
 
     pub async fn authorize_ws<S>(&self, ticket: S) -> Result<WebSocketTicketDecoded, ServiceError>
@@ -91,7 +101,7 @@ impl AuthService {
         fingerprint: S,
         room_id: RoomId,
         room_password: RoomPassword,
-    ) -> Result<(AccessTokenDecoded, RefreshTokenDecoded), ServiceError>
+    ) -> Result<Jwt, ServiceError>
     where
         S: Into<String>,
     {
@@ -123,14 +133,15 @@ impl AuthService {
         let refresh_token =
             RefreshTokenDecoded::new(client.refresh_token, client.refresh_token_exp);
 
-        Ok((access_token, refresh_token))
+        let res = Jwt {
+            access_token,
+            refresh_token,
+        };
+
+        Ok(res)
     }
 
-    pub async fn refresh_tokens<S>(
-        &self,
-        fingerprint: S,
-        jwt: Jwt,
-    ) -> Result<(AccessTokenDecoded, RefreshTokenDecoded), ServiceError>
+    pub async fn refresh_tokens<S>(&self, fingerprint: S, jwt: Jwt) -> Result<Jwt, ServiceError>
     where
         S: Into<String>,
     {
@@ -176,7 +187,12 @@ impl AuthService {
         let new_refresh_token =
             RefreshTokenDecoded::new(new_client.refresh_token, new_client.refresh_token_exp);
 
-        Ok((new_access_token, new_refresh_token))
+        let res = Jwt {
+            access_token: new_access_token,
+            refresh_token: new_refresh_token,
+        };
+
+        Ok(res)
     }
 
     pub async fn logout(&self, jwt: Jwt) -> Result<(), ServiceError> {

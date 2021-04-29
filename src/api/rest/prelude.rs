@@ -1,7 +1,6 @@
 pub use actix_web::HttpRequest;
 pub use actix_web::HttpResponse;
 
-pub use crate::api::context::Context;
 pub use crate::api::rest::err_with_internal_error;
 pub use crate::api::rest::err_with_status;
 pub use crate::api::rest::msg_with_internal_error;
