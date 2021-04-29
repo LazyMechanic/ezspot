@@ -65,7 +65,9 @@ impl<R: RoomRepo> RoomService for RoomServiceImpl<R> {
 
         let create_room_cred_req = room_repo::CreateRoomCredentialsRequest {
             room_id,
-            master_password: (master_password, room_repo::RoomPasswordFeature::OneOff),
+            room_passwords: vec![(master_password, room_repo::RoomPasswordFeature::OneOff)]
+                .into_iter()
+                .collect(),
         };
         let create_room_cred_res = self
             .repo

@@ -1,6 +1,8 @@
 use crate::TEST::port::room::repo::models::*;
 use crate::TEST::port::RepoResult;
 
+use std::collections::HashMap;
+
 #[async_trait::async_trait]
 pub trait RoomRepo: Send + Sync {
     async fn create_room_credentials(
@@ -11,7 +13,7 @@ pub trait RoomRepo: Send + Sync {
 
 pub struct CreateRoomCredentialsRequest {
     pub room_id: RoomId,
-    pub master_password: (String, RoomPasswordFeature),
+    pub room_passwords: HashMap<String, RoomPasswordFeature>,
 }
 
 pub struct CreateRoomCredentialsResponse {
