@@ -114,7 +114,7 @@ impl Default for Config {
           addr: "127.0.0.1:8001"
           env: "dev" # "dev" | "prod"
         auth:
-          enable: true
+          enabled: true
           secret: "secret"
           ws_ticket_expires: 300 # 5 min
           access_expires: 900 # 15 min

@@ -1,5 +1,5 @@
-use super::*;
 use crate::adapter::rest_prelude::*;
+use crate::adapter::room::rest::RoomId;
 use crate::port::auth::service::models as auth_models;
 
 use actix_web::dev::Payload;
@@ -11,6 +11,9 @@ use uuid::Uuid;
 
 pub type ClientId = Uuid;
 pub type RefreshTokenSalt = Uuid;
+
+pub type AccessTokenEncoded = String;
+pub type RefreshTokenEncoded = String;
 
 #[derive(Debug, Clone)]
 pub struct AccessTokenDecoded {

@@ -1,4 +1,4 @@
-use super::*;
+use crate::adapter::auth::rest::AccessTokenEncoded;
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct RefreshTokensRequest {

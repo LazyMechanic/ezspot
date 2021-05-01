@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 pub mod adapter;
 pub mod app;
 pub mod cli;
