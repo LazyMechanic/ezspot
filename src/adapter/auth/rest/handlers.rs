@@ -68,7 +68,14 @@ async fn login(state: web::Data<State>, req: web::Json<LoginRequest>) -> ApiResu
 }
 
 #[actix_web::post("/v1/auth/logout")]
-async fn logout(_state: web::Data<State>, _jwt: Jwt) -> ApiResult {
+async fn logout(state: web::Data<State>, jwt: Jwt) -> ApiResult {
+    let logout_req = auth_service::LogoutRequest { jwt: jwt.into() };
+    state
+        .auth_service
+        .logout(logout_req)
+        .await
+        .map_err(err_with_internal_error)?;
+
     Ok(HttpResponse::Ok().finish())
 }
 

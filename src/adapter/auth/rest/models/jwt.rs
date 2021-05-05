@@ -32,6 +32,12 @@ impl From<auth_models::AccessTokenDecoded> for AccessTokenDecoded {
     }
 }
 
+impl From<AccessTokenDecoded> for auth_models::AccessTokenDecoded {
+    fn from(f: AccessTokenDecoded) -> Self {
+        Self::new(f.exp, f.client_id, f.room_id)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct RefreshTokenDecoded {
     pub exp: NaiveDateTime,
@@ -47,6 +53,12 @@ impl From<auth_models::RefreshTokenDecoded> for RefreshTokenDecoded {
     }
 }
 
+impl From<RefreshTokenDecoded> for auth_models::RefreshTokenDecoded {
+    fn from(f: RefreshTokenDecoded) -> Self {
+        Self::new(f.salt, f.exp)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Jwt {
     pub access_token: AccessTokenDecoded,
@@ -55,6 +67,15 @@ pub struct Jwt {
 
 impl From<auth_models::Jwt> for Jwt {
     fn from(f: auth_models::Jwt) -> Self {
+        Self {
+            access_token: f.access_token.into(),
+            refresh_token: f.refresh_token.into(),
+        }
+    }
+}
+
+impl From<Jwt> for auth_models::Jwt {
+    fn from(f: Jwt) -> Self {
         Self {
             access_token: f.access_token.into(),
             refresh_token: f.refresh_token.into(),
