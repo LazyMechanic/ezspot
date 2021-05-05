@@ -104,6 +104,81 @@ async fn test_bad_login() -> anyhow::Result<()> {
 
     Ok(())
 }
+//
+// #[actix_rt::test]
+// async fn test_logout() -> anyhow::Result<()> {
+//     let state = new_default_state();
+//     let mut app = actix_web::test::init_service(
+//         App::new()
+//             .data(state.clone())
+//             .wrap(
+//                 auth_rest::JwtAuth::default()
+//                     .exclude_regex(".*/auth/login$")
+//                     .exclude_fn({
+//                         let excludes_regex = vec![
+//                             (Regex::new(".*/rooms$").unwrap(), http::Method::POST),
+//                             (Regex::new(".*/without_auth$").unwrap(), http::Method::GET),
+//                             (
+//                                 Regex::new(".*/without_auth/another$").unwrap(),
+//                                 http::Method::PUT,
+//                             ),
+//                         ];
+//                         Box::new(move |req| {
+//                             excludes_regex.iter().fold(false, |acc, (re, method)| {
+//                                 let m = re.is_match(req.path()) && req.method() == method;
+//                                 acc || m
+//                             })
+//                         })
+//                     }),
+//             )
+//             .configure(room_rest::service_config)
+//             .configure(auth_rest::service_config),
+//     )
+//     .await;
+//
+//     let create_room_req = test::TestRequest::post().uri("/v1/rooms").to_request();
+//     let create_room_resp = test::call_service(&mut app, create_room_req).await;
+//
+//     assert_eq!(
+//         create_room_resp.status(),
+//         http::StatusCode::OK,
+//         "status code"
+//     );
+//
+//     let create_room_resp_body: room_rest::CreateRoomResponse =
+//         actix_web::test::read_body_json(create_room_resp).await;
+//
+//     let invalid_password = loop {
+//         let p = rand::thread_rng()
+//             .sample_iter(Alphanumeric)
+//             .take(10)
+//             .map(char::from)
+//             .collect::<String>();
+//         if p != create_room_resp_body.master_password {
+//             break p;
+//         }
+//     };
+//
+//     let login_req = test::TestRequest::post()
+//         .uri("/v1/auth/login")
+//         .set_json(&auth_rest::LoginRequest {
+//             fingerprint: "123".to_string(),
+//             room_id: create_room_resp_body.room_id,
+//             room_password: invalid_password,
+//         })
+//         .to_request();
+//     let login_resp = test::call_service(&mut app, login_req).await;
+//
+//     assert_eq!(
+//         login_resp.status(),
+//         http::StatusCode::UNAUTHORIZED,
+//         "status code"
+//     );
+//
+//     let _: HttpApiProblem = actix_web::test::read_body_json(login_resp).await;
+//
+//     Ok(())
+// }
 
 #[actix_rt::test]
 async fn test_jwt_auth_middleware() -> anyhow::Result<()> {
@@ -134,22 +209,9 @@ async fn test_jwt_auth_middleware() -> anyhow::Result<()> {
             .wrap(
                 auth_rest::JwtAuth::default()
                     .exclude_regex(".*/auth/login$")
-                    .exclude_fn({
-                        let excludes_regex = vec![
-                            (Regex::new(".*/rooms$").unwrap(), http::Method::POST),
-                            (Regex::new(".*/without_auth$").unwrap(), http::Method::GET),
-                            (
-                                Regex::new(".*/without_auth/another$").unwrap(),
-                                http::Method::PUT,
-                            ),
-                        ];
-                        Box::new(move |req| {
-                            excludes_regex.iter().fold(false, |acc, (re, method)| {
-                                let m = re.is_match(req.path()) && req.method() == method;
-                                acc || m
-                            })
-                        })
-                    }),
+                    .exclude_regex((".*/rooms$", http::Method::POST))
+                    .exclude_regex((".*/without_auth$", http::Method::GET))
+                    .exclude_regex((".*/without_auth/another$", http::Method::PUT)),
             )
             .configure(room_rest::service_config)
             .configure(auth_rest::service_config)
@@ -166,7 +228,7 @@ async fn test_jwt_auth_middleware() -> anyhow::Result<()> {
     assert_eq!(
         create_room_resp.status(),
         http::StatusCode::OK,
-        "status code"
+        "create room status code"
     );
 
     let create_room_resp_body: room_rest::CreateRoomResponse =
@@ -182,7 +244,11 @@ async fn test_jwt_auth_middleware() -> anyhow::Result<()> {
         .to_request();
     let login_resp = test::call_service(&mut app, login_req).await;
 
-    assert_eq!(login_resp.status(), http::StatusCode::OK, "status code");
+    assert_eq!(
+        login_resp.status(),
+        http::StatusCode::OK,
+        "login status code"
+    );
 
     let cookies: Vec<String> = login_resp
         .headers()
@@ -212,7 +278,7 @@ async fn test_jwt_auth_middleware() -> anyhow::Result<()> {
             .to_request();
         let res = test::call_service(&mut app, req).await;
 
-        assert_eq!(res.status(), http::StatusCode::OK, "status code");
+        assert_eq!(res.status(), http::StatusCode::OK, "with auth status code");
     }
 
     // Req without auth
@@ -232,7 +298,11 @@ async fn test_jwt_auth_middleware() -> anyhow::Result<()> {
         for req in reqs {
             let res = test::call_service(&mut app, req).await;
 
-            assert_eq!(res.status(), http::StatusCode::OK, "status code");
+            assert_eq!(
+                res.status(),
+                http::StatusCode::OK,
+                "without auth status code"
+            );
         }
     }
 

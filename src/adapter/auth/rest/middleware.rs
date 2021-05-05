@@ -7,19 +7,22 @@ use crate::port::auth::service as auth_service;
 use crate::port::auth::service::Decode;
 
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
+use actix_web::http::Method;
 use actix_web::{web, Error as ActixError, HttpMessage};
 use futures::future::LocalBoxFuture;
 use futures::{future, FutureExt};
-use regex::RegexSet;
+use regex::{Regex, RegexSet};
 use std::cell::RefCell;
-use std::collections::HashSet;
+use std::collections::hash_map::RandomState;
+use std::collections::{HashMap, HashSet};
+use std::convert::TryFrom;
 use std::rc::Rc;
 use std::task;
 
 struct Inner {
     exclude_fn: Option<Box<dyn Fn(&ServiceRequest) -> bool>>,
-    exclude: HashSet<String>,
-    exclude_regex: RegexSet,
+    exclude: HashMap<String, Option<HashSet<http::Method>>>,
+    exclude_regex: Vec<ExcludeRegexRule>,
 }
 
 // There are two steps in middleware processing.
@@ -33,33 +36,134 @@ impl Default for JwtAuth {
         Self(Rc::new(Inner {
             exclude_fn: None,
             exclude: Default::default(),
-            exclude_regex: RegexSet::empty(),
+            exclude_regex: vec![],
         }))
     }
 }
 
+pub struct ExcludeRule {
+    pub path: String,
+    pub methods: Option<HashSet<http::Method>>,
+}
+
+impl From<String> for ExcludeRule {
+    fn from(f: String) -> Self {
+        Self {
+            path: f,
+            methods: Default::default(),
+        }
+    }
+}
+
+impl<'a> From<&'a str> for ExcludeRule {
+    fn from(f: &'a str) -> Self {
+        Self {
+            path: f.to_owned(),
+            methods: Default::default(),
+        }
+    }
+}
+
+impl<S, M> From<(S, M)> for ExcludeRule
+where
+    S: Into<String>,
+    M: Into<http::Method>,
+{
+    fn from(f: (S, M)) -> Self {
+        let mut methods = HashSet::new();
+        methods.insert(f.1.into());
+        Self {
+            path: f.0.into(),
+            methods: Some(methods),
+        }
+    }
+}
+
+pub struct ExcludeRegexRule {
+    pub path: Regex,
+    pub methods: Option<HashSet<http::Method>>,
+}
+
+impl From<String> for ExcludeRegexRule {
+    fn from(f: String) -> Self {
+        Self {
+            path: Regex::new(&f).unwrap(),
+            methods: Default::default(),
+        }
+    }
+}
+
+impl<'a> From<&'a str> for ExcludeRegexRule {
+    fn from(f: &'a str) -> Self {
+        Self {
+            path: Regex::new(f).unwrap(),
+            methods: Default::default(),
+        }
+    }
+}
+
+impl<'a> From<(&'a str, http::Method)> for ExcludeRegexRule {
+    fn from(f: (&'a str, http::Method)) -> Self {
+        let mut methods = HashSet::new();
+        methods.insert(f.1);
+        Self {
+            path: Regex::new(f.0).unwrap(),
+            methods: Some(methods),
+        }
+    }
+}
+
+impl From<(String, http::Method)> for ExcludeRegexRule {
+    fn from(f: (String, http::Method)) -> Self {
+        let mut methods = HashSet::new();
+        methods.insert(f.1);
+        Self {
+            path: Regex::new(&f.0).unwrap(),
+            methods: Some(methods),
+        }
+    }
+}
+
+impl From<(Regex, http::Method)> for ExcludeRegexRule {
+    fn from(f: (Regex, http::Method)) -> Self {
+        let mut methods = HashSet::new();
+        methods.insert(f.1);
+        Self {
+            path: f.0,
+            methods: Some(methods),
+        }
+    }
+}
+
 impl JwtAuth {
+    /// Ignore and do not check if `f` returns true
     pub fn exclude_fn(mut self, f: Box<dyn Fn(&ServiceRequest) -> bool>) -> Self {
         Rc::get_mut(&mut self.0).unwrap().exclude_fn = Some(f);
         self
     }
 
     /// Ignore and do not check auth for specified path.
-    pub fn exclude<T: Into<String>>(mut self, path: T) -> Self {
+    pub fn exclude<T>(mut self, rule: T) -> Self
+    where
+        T: Into<ExcludeRule>,
+    {
+        let rule = rule.into();
         Rc::get_mut(&mut self.0)
             .unwrap()
             .exclude
-            .insert(path.into());
+            .insert(rule.path, rule.methods);
         self
     }
 
     /// Ignore and do not check auth for paths that match regex
-    pub fn exclude_regex<T: Into<String>>(mut self, path: T) -> Self {
-        let inner = Rc::get_mut(&mut self.0).unwrap();
-        let mut patterns = inner.exclude_regex.patterns().to_vec();
-        patterns.push(path.into());
-        let regex_set = RegexSet::new(patterns).unwrap();
-        inner.exclude_regex = regex_set;
+    pub fn exclude_regex<T>(mut self, rule: T) -> Self
+    where
+        T: Into<ExcludeRegexRule>,
+    {
+        Rc::get_mut(&mut self.0)
+            .unwrap()
+            .exclude_regex
+            .push(rule.into());
         self
     }
 }
@@ -114,10 +218,24 @@ where
         let exclude = {
             let exclude_fn_res = match &self.inner.exclude_fn {
                 Some(f) => f(&req),
-                None => true,
+                None => false,
             };
-            let exclude_res = self.inner.exclude.contains(req.path());
-            let exclude_regexp_res = self.inner.exclude_regex.is_match(req.path());
+
+            let exclude_res = match self.inner.exclude.get(req.path()) {
+                None => false,
+                Some(None) => true,
+                Some(Some(methods)) => methods.contains(req.method()),
+            };
+            let exclude_regexp_res = self.inner.exclude_regex.iter().fold(false, |acc, rule| {
+                let match_path = rule.path.is_match(req.path());
+                let match_method = match &rule.methods {
+                    None => true,
+                    Some(methods) => methods.contains(req.method()),
+                };
+
+                let m = match_path && match_method;
+                acc || m
+            });
 
             exclude_fn_res || exclude_res || exclude_regexp_res
         };
