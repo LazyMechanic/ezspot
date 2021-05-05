@@ -16,12 +16,7 @@ async fn test_create_room() -> anyhow::Result<()> {
 
     assert_eq!(resp.status(), http::StatusCode::OK, "status code");
 
-    let resp_body: Result<CreateRoomResponse, _> = {
-        let resp_body_json: serde_json::Value = actix_web::test::read_body_json(resp).await;
-        serde_json::from_value(resp_body_json)
-    };
-
-    assert_eq!(resp_body.is_ok(), true, "body is error");
+    let _: CreateRoomResponse = actix_web::test::read_body_json(resp).await;
 
     Ok(())
 }

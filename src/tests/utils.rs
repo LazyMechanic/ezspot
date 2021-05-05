@@ -9,7 +9,6 @@ use crate::config::Config;
 use crate::domain::auth::AuthServiceImpl;
 use crate::domain::example::ExampleServiceImpl;
 use crate::domain::room::RoomServiceImpl;
-use crate::infra;
 use crate::infra::state::State;
 use crate::port::auth::service::AuthService;
 use crate::port::example::service::ExampleService;
@@ -21,6 +20,7 @@ pub struct StateBuilder {
     room_service: Option<Arc<dyn RoomService>>,
 }
 
+#[allow(dead_code)]
 impl StateBuilder {
     pub fn new() -> Self {
         Self {

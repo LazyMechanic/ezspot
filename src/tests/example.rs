@@ -31,10 +31,7 @@ async fn test_create() -> anyhow::Result<()> {
 
     assert_eq!(resp.status(), http::StatusCode::OK, "status code");
 
-    let resp_body: CreateResponse = {
-        let resp_body_json: serde_json::Value = actix_web::test::read_body_json(resp).await;
-        serde_json::from_value(resp_body_json)?
-    };
+    let resp_body: CreateResponse = actix_web::test::read_body_json(resp).await;
 
     let exp_resp_body = CreateResponse {
         entry: Entry {
@@ -90,10 +87,7 @@ async fn test_get_entry_query() -> anyhow::Result<()> {
 
         assert_eq!(resp.status(), http::StatusCode::OK, "status code");
 
-        let resp_body: GetResponse = {
-            let resp_body_json: serde_json::Value = actix_web::test::read_body_json(resp).await;
-            serde_json::from_value(resp_body_json)?
-        };
+        let resp_body: GetResponse = actix_web::test::read_body_json(resp).await;
 
         resp_body.entry.id
     };
@@ -106,10 +100,7 @@ async fn test_get_entry_query() -> anyhow::Result<()> {
 
     assert_eq!(resp.status(), http::StatusCode::OK, "status code");
 
-    let resp_body: GetResponse = {
-        let resp_body_json: serde_json::Value = actix_web::test::read_body_json(resp).await;
-        serde_json::from_value(resp_body_json)?
-    };
+    let resp_body: GetResponse = actix_web::test::read_body_json(resp).await;
 
     let exp_resp_body = GetResponse {
         entry: Entry {
@@ -166,10 +157,7 @@ async fn test_get_entry_params() -> anyhow::Result<()> {
 
         assert_eq!(resp.status(), http::StatusCode::OK, "status code");
 
-        let resp_body: GetResponse = {
-            let resp_body_json: serde_json::Value = actix_web::test::read_body_json(resp).await;
-            serde_json::from_value(resp_body_json)?
-        };
+        let resp_body: GetResponse = actix_web::test::read_body_json(resp).await;
 
         resp_body.entry.id
     };
@@ -182,10 +170,7 @@ async fn test_get_entry_params() -> anyhow::Result<()> {
 
     assert_eq!(resp.status(), http::StatusCode::OK, "status code");
 
-    let resp_body: GetResponse = {
-        let resp_body_json: serde_json::Value = actix_web::test::read_body_json(resp).await;
-        serde_json::from_value(resp_body_json)?
-    };
+    let resp_body: GetResponse = actix_web::test::read_body_json(resp).await;
 
     let exp_resp_body = GetResponse {
         entry: Entry {
@@ -242,10 +227,7 @@ async fn test_delete_entry() -> anyhow::Result<()> {
 
         assert_eq!(resp.status(), http::StatusCode::OK, "status code");
 
-        let resp_body: GetResponse = {
-            let resp_body_json: serde_json::Value = actix_web::test::read_body_json(resp).await;
-            serde_json::from_value(resp_body_json)?
-        };
+        let resp_body: GetResponse = actix_web::test::read_body_json(resp).await;
 
         resp_body.entry.id
     };
@@ -259,10 +241,7 @@ async fn test_delete_entry() -> anyhow::Result<()> {
 
     assert_eq!(resp.status(), http::StatusCode::OK, "status code");
 
-    let resp_body: DeleteResponse = {
-        let resp_body_json: serde_json::Value = actix_web::test::read_body_json(resp).await;
-        serde_json::from_value(resp_body_json)?
-    };
+    let resp_body: DeleteResponse = actix_web::test::read_body_json(resp).await;
 
     let exp_resp_body = DeleteResponse {
         entry: Entry {
@@ -301,8 +280,7 @@ async fn test_delete_entry() -> anyhow::Result<()> {
             "status code"
         );
 
-        let resp_body_json: serde_json::Value = actix_web::test::read_body_json(resp).await;
-        let _: HttpApiProblem = serde_json::from_value(resp_body_json)?;
+        let _: HttpApiProblem = actix_web::test::read_body_json(resp).await;
     }
 
     Ok(())
@@ -337,10 +315,7 @@ async fn test_update_entry() -> anyhow::Result<()> {
 
         assert_eq!(resp.status(), http::StatusCode::OK, "status code");
 
-        let resp_body: GetResponse = {
-            let resp_body_json: serde_json::Value = actix_web::test::read_body_json(resp).await;
-            serde_json::from_value(resp_body_json)?
-        };
+        let resp_body: GetResponse = actix_web::test::read_body_json(resp).await;
 
         resp_body.entry.id
     };
@@ -358,10 +333,7 @@ async fn test_update_entry() -> anyhow::Result<()> {
 
     assert_eq!(resp.status(), http::StatusCode::OK, "status code");
 
-    let resp_body: UpdateResponse = {
-        let resp_body_json: serde_json::Value = actix_web::test::read_body_json(resp).await;
-        serde_json::from_value(resp_body_json)?
-    };
+    let resp_body: UpdateResponse = actix_web::test::read_body_json(resp).await;
 
     let exp_resp_body = UpdateResponse {
         entry: Entry {
