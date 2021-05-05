@@ -12,7 +12,7 @@ async fn test_create_room() -> anyhow::Result<()> {
 
     let req = test::TestRequest::post().uri("/v1/rooms").to_request();
 
-    let resp = actix_web::test::call_service(&mut app, req).await;
+    let resp = test::call_service(&mut app, req).await;
 
     assert_eq!(resp.status(), http::StatusCode::OK, "status code");
 

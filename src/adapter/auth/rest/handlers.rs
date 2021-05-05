@@ -44,23 +44,16 @@ async fn login(state: web::Data<State>, req: web::Json<LoginRequest>) -> ApiResu
 
     let res = {
         let mut res = HttpResponse::Ok().json(login_res_json);
-        let h = res.headers_mut();
-
-        HeaderValue::from_str(
-            &cookie::Cookie::build(REFRESH_TOKEN_COOKIE_NAME, refresh_token)
+        res.add_cookie(
+            &actix_web::cookie::Cookie::build(REFRESH_TOKEN_COOKIE_NAME, refresh_token)
                 .path("/api/v1/auth")
                 .http_only(true)
                 .max_age(time::Duration::seconds(
                     login_res.jwt.refresh_token.exp().timestamp() - Utc::now().timestamp(),
                 ))
-                .finish()
-                .to_string(),
+                .finish(),
         )
-        .map(|c| {
-            h.append(header::SET_COOKIE, c);
-        })
         .map_err(err_with_internal_error)?;
-
         res
     };
 

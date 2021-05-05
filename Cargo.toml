@@ -8,14 +8,13 @@ edition = "2018"
 
 [dependencies]
 actix-web = "3"
-actix-rt = "2"
+actix-rt = { version = "2", features = ["default"] }
 
 anyhow = "1.0"
 async-trait = "0.1"
 base64 = "0.13"
 chrono = { version = "0.4", features = ["serde"] }
 config = "0.10"
-cookie = "0.15"
 clap = "3.0.0-beta.2"
 http = "0.2"
 http-serde = "1.0"

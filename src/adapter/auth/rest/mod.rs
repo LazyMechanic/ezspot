@@ -6,6 +6,6 @@ pub use handlers::*;
 pub use middleware::*;
 pub use models::*;
 
-const REFRESH_TOKEN_COOKIE_NAME: &str = "refreshToken";
-const ACCESS_TOKEN_HEADER_NAME: &str = "Authorization";
-const ACCESS_TOKEN_PREFIX: &str = "Bearer ";
+pub const REFRESH_TOKEN_COOKIE_NAME: &str = "refreshToken";
+pub const ACCESS_TOKEN_HEADER_NAME: &str = "Authorization";
+pub const ACCESS_TOKEN_PREFIX: &str = "Bearer ";

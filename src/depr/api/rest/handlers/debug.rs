@@ -109,7 +109,7 @@ mod tests {
     macro_rules! test_case {
         ($app:ident, $t:ident) => {
             let req = $t.case.req.to_request();
-            let resp = actix_web::test::call_service(&mut $app, req).await;
+            let resp = test::call_service(&mut $app, req).await;
 
             assert_eq!(resp.status(), $t.exp.status, "status code");
 

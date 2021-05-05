@@ -7,7 +7,7 @@ use crate::port::auth::service as auth_service;
 use crate::port::auth::service::Decode;
 
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
-use actix_web::{Error as ActixError, HttpMessage};
+use actix_web::{web, Error as ActixError, HttpMessage};
 use futures::future::LocalBoxFuture;
 use futures::{future, FutureExt};
 use regex::RegexSet;
@@ -17,6 +17,7 @@ use std::rc::Rc;
 use std::task;
 
 struct Inner {
+    exclude_fn: Option<Box<dyn Fn(&ServiceRequest) -> bool>>,
     exclude: HashSet<String>,
     exclude_regex: RegexSet,
 }
@@ -30,6 +31,7 @@ pub struct JwtAuth(Rc<Inner>);
 impl Default for JwtAuth {
     fn default() -> Self {
         Self(Rc::new(Inner {
+            exclude_fn: None,
             exclude: Default::default(),
             exclude_regex: RegexSet::empty(),
         }))
@@ -37,6 +39,11 @@ impl Default for JwtAuth {
 }
 
 impl JwtAuth {
+    pub fn exclude_fn(mut self, f: Box<dyn Fn(&ServiceRequest) -> bool>) -> Self {
+        Rc::get_mut(&mut self.0).unwrap().exclude_fn = Some(f);
+        self
+    }
+
     /// Ignore and do not check auth for specified path.
     pub fn exclude<T: Into<String>>(mut self, path: T) -> Self {
         Rc::get_mut(&mut self.0)
@@ -104,10 +111,18 @@ where
     }
 
     fn call(&mut self, req: ServiceRequest) -> Self::Future {
-        let check_auth = !(self.inner.exclude.contains(req.path())
-            || self.inner.exclude_regex.is_match(req.path()));
+        let exclude = {
+            let exclude_fn_res = match &self.inner.exclude_fn {
+                Some(f) => f(&req),
+                None => true,
+            };
+            let exclude_res = self.inner.exclude.contains(req.path());
+            let exclude_regexp_res = self.inner.exclude_regex.is_match(req.path());
 
-        if check_auth {
+            exclude_fn_res || exclude_res || exclude_regexp_res
+        };
+
+        if !exclude {
             let service = Rc::clone(&self.service);
             async move {
                 auth(&req).await?;
@@ -121,12 +136,9 @@ where
 }
 
 async fn auth(req: &ServiceRequest) -> Result<(), ActixError> {
-    let ctx = req
-        .app_data::<State>()
-        .map(|data| data.clone())
-        .expect("no state");
+    let ctx = req.app_data::<web::Data<State>>().expect("no state");
 
-    let auth_service = ctx.auth_service;
+    let auth_service = &ctx.auth_service;
 
     // Get access token from header
     let access_token_encoded = req

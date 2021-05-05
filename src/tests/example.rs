@@ -27,7 +27,7 @@ async fn test_create() -> anyhow::Result<()> {
         })
         .to_request();
 
-    let resp = actix_web::test::call_service(&mut app, req).await;
+    let resp = test::call_service(&mut app, req).await;
 
     assert_eq!(resp.status(), http::StatusCode::OK, "status code");
 
@@ -83,7 +83,7 @@ async fn test_get_entry_query() -> anyhow::Result<()> {
             })
             .to_request();
 
-        let resp = actix_web::test::call_service(&mut app, req).await;
+        let resp = test::call_service(&mut app, req).await;
 
         assert_eq!(resp.status(), http::StatusCode::OK, "status code");
 
@@ -96,7 +96,7 @@ async fn test_get_entry_query() -> anyhow::Result<()> {
         .uri(&format!("/v1/example/entries?id={}", entry_id))
         .to_request();
 
-    let resp = actix_web::test::call_service(&mut app, req).await;
+    let resp = test::call_service(&mut app, req).await;
 
     assert_eq!(resp.status(), http::StatusCode::OK, "status code");
 
@@ -153,7 +153,7 @@ async fn test_get_entry_params() -> anyhow::Result<()> {
             })
             .to_request();
 
-        let resp = actix_web::test::call_service(&mut app, req).await;
+        let resp = test::call_service(&mut app, req).await;
 
         assert_eq!(resp.status(), http::StatusCode::OK, "status code");
 
@@ -166,7 +166,7 @@ async fn test_get_entry_params() -> anyhow::Result<()> {
         .uri(&format!("/v1/example/entries/{}", entry_id))
         .to_request();
 
-    let resp = actix_web::test::call_service(&mut app, req).await;
+    let resp = test::call_service(&mut app, req).await;
 
     assert_eq!(resp.status(), http::StatusCode::OK, "status code");
 
@@ -223,7 +223,7 @@ async fn test_delete_entry() -> anyhow::Result<()> {
             })
             .to_request();
 
-        let resp = actix_web::test::call_service(&mut app, req).await;
+        let resp = test::call_service(&mut app, req).await;
 
         assert_eq!(resp.status(), http::StatusCode::OK, "status code");
 
@@ -237,7 +237,7 @@ async fn test_delete_entry() -> anyhow::Result<()> {
         .set_json(&DeleteRequest { id: entry_id })
         .to_request();
 
-    let resp = actix_web::test::call_service(&mut app, req).await;
+    let resp = test::call_service(&mut app, req).await;
 
     assert_eq!(resp.status(), http::StatusCode::OK, "status code");
 
@@ -272,7 +272,7 @@ async fn test_delete_entry() -> anyhow::Result<()> {
             .uri(&format!("/v1/example/entries/{}", entry_id))
             .to_request();
 
-        let resp = actix_web::test::call_service(&mut app, req).await;
+        let resp = test::call_service(&mut app, req).await;
 
         assert_eq!(
             resp.status(),
@@ -311,7 +311,7 @@ async fn test_update_entry() -> anyhow::Result<()> {
             })
             .to_request();
 
-        let resp = actix_web::test::call_service(&mut app, req).await;
+        let resp = test::call_service(&mut app, req).await;
 
         assert_eq!(resp.status(), http::StatusCode::OK, "status code");
 
@@ -329,7 +329,7 @@ async fn test_update_entry() -> anyhow::Result<()> {
         })
         .to_request();
 
-    let resp = actix_web::test::call_service(&mut app, req).await;
+    let resp = test::call_service(&mut app, req).await;
 
     assert_eq!(resp.status(), http::StatusCode::OK, "status code");
 
