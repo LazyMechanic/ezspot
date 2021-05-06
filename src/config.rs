@@ -26,9 +26,8 @@ pub enum Environment {
 
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct Auth {
-    pub enable: bool,
+    pub enabled: bool,
     pub secret: String,
-    pub ws_ticket_expires: i64,
     pub access_expires: i64,
     pub refresh_expires: i64,
 }
@@ -72,12 +71,12 @@ fn default_logger() -> serde_yaml::Value {
         - stdout
     loggers:
       ezspot:
-        level: debug
+        level: example
         appenders:
           - stdout
         additive: false
       ezspot_lib:
-        level: debug
+        level: example
         appenders:
           - stdout
         additive: false
@@ -105,5 +104,60 @@ impl Config {
 
         let settings = config.try_into()?;
         Ok(settings)
+    }
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        const DEFAULT_CONFIG: &str = r#"
+        server:
+          addr: "127.0.0.1:8001"
+          env: "dev" # "dev" | "prod"
+        auth:
+          enabled: true
+          secret: "secret"
+          ws_ticket_expires: 300 # 5 min
+          access_expires: 900 # 15 min
+          refresh_expires: 86400 # 1 day
+        room:
+          idle_time: 1800 # 30 min
+          start_id: 100000
+          max_rooms: 1000000 # 100'000 - 1'100'000
+          password:
+            expires: 60 # 1 min
+            length: 6 # example: 0xy12z
+            use_numbers: true
+            use_lowercase_letters: true
+            use_uppercase_letters: false
+            use_symbols: false
+            use_spaces: false
+            use_exclude_similar_characters: false
+            strict: true
+        ws:
+          max_connections: 65000
+        logger:
+          appenders:
+            stdout:
+              kind: console
+              encoder:
+                pattern: "{d(%Y-%m-%d %H:%M:%S %Z)(utc)} - {h({l})} {M} = {m} {n}"
+          root:
+            level: error
+            appenders:
+              - stdout
+          loggers:
+            ezspot:
+              level: example
+              appenders:
+                - stdout
+              additive: false
+            ezspot_lib:
+              level: example
+              appenders:
+                - stdout
+              additive: false
+        "#;
+
+        serde_yaml::from_str(DEFAULT_CONFIG).expect("invalid default config")
     }
 }
