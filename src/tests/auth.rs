@@ -184,6 +184,125 @@ async fn test_logout() -> anyhow::Result<()> {
 }
 
 #[actix_rt::test]
+async fn test_refresh_tokens() -> anyhow::Result<()> {
+    #[actix_web::post("/v1/with_auth")]
+    async fn with_auth(_jwt: auth_rest::Jwt) -> ApiResult {
+        Ok(HttpResponse::Ok().finish())
+    }
+
+    let state = new_default_state();
+    let mut app = actix_web::test::init_service(
+        App::new()
+            .data(state.clone())
+            .wrap(
+                auth_rest::JwtAuth::default()
+                    .exclude_regex(".*/auth/login$")
+                    .exclude_regex((".*/rooms$", http::Method::POST)),
+            )
+            .configure(room_rest::service_config)
+            .configure(auth_rest::service_config)
+            .service(with_auth),
+    )
+    .await;
+
+    let create_room_req = test::TestRequest::post().uri("/v1/rooms").to_request();
+    let create_room_resp = test::call_service(&mut app, create_room_req).await;
+
+    assert_eq!(
+        create_room_resp.status(),
+        http::StatusCode::OK,
+        "create room status code"
+    );
+
+    let create_room_resp_body: room_rest::CreateRoomResponse =
+        actix_web::test::read_body_json(create_room_resp).await;
+
+    let login_req = test::TestRequest::post()
+        .uri("/v1/auth/login")
+        .set_json(&auth_rest::LoginRequest {
+            fingerprint: "123".to_string(),
+            room_id: create_room_resp_body.room_id,
+            room_password: create_room_resp_body.master_password,
+        })
+        .to_request();
+    let login_resp = test::call_service(&mut app, login_req).await;
+
+    assert_eq!(
+        login_resp.status(),
+        http::StatusCode::OK,
+        "login status code"
+    );
+
+    let cookies: Vec<String> = login_resp
+        .headers()
+        .get_all(http::header::SET_COOKIE)
+        .map(|v| v.to_str().unwrap().to_owned())
+        .collect();
+
+    let cookie = cookies
+        .into_iter()
+        .find(|c| c.contains(REFRESH_TOKEN_COOKIE_NAME));
+    assert!(cookie.is_some(), "(login) cookie refresh token");
+
+    let cookie = actix_web::cookie::Cookie::parse(cookie.unwrap())?;
+
+    let login_resp_body: auth_rest::LoginResponse =
+        actix_web::test::read_body_json(login_resp).await;
+
+    let refresh_tokens_req = test::TestRequest::post()
+        .uri("/v1/auth/refresh-tokens")
+        .header(
+            ACCESS_TOKEN_HEADER_NAME,
+            login_resp_body.access_token.clone(),
+        )
+        .cookie(cookie)
+        .set_json(&auth_rest::RefreshTokensRequest {
+            fingerprint: "123".to_string(),
+        })
+        .to_request();
+    let refresh_tokens_resp = test::call_service(&mut app, refresh_tokens_req).await;
+
+    assert_eq!(
+        refresh_tokens_resp.status(),
+        http::StatusCode::OK,
+        "refresh tokens status code"
+    );
+
+    let cookies: Vec<String> = refresh_tokens_resp
+        .headers()
+        .get_all(http::header::SET_COOKIE)
+        .map(|v| v.to_str().unwrap().to_owned())
+        .collect();
+
+    let cookie = cookies
+        .into_iter()
+        .find(|c| c.contains(REFRESH_TOKEN_COOKIE_NAME));
+    assert!(cookie.is_some(), "(refresh tokens) cookie refresh token");
+
+    let cookie = actix_web::cookie::Cookie::parse(cookie.unwrap())?;
+
+    let refresh_tokens_resp_body: auth_rest::RefreshTokensResponse =
+        actix_web::test::read_body_json(refresh_tokens_resp).await;
+
+    // Req with auth
+    {
+        let req = test::TestRequest::post()
+            .uri("/v1/with_auth")
+            .header(
+                ACCESS_TOKEN_HEADER_NAME,
+                refresh_tokens_resp_body.access_token.clone(),
+            )
+            .cookie(cookie)
+            .to_request();
+        let res = test::call_service(&mut app, req).await;
+
+        assert_eq!(res.status(), http::StatusCode::OK, "with auth status code");
+    }
+
+    Ok(())
+}
+
+#[actix_rt::test]
 async fn test_jwt_auth_middleware() -> anyhow::Result<()> {
     #[actix_web::get("/v1/without_auth")]
     async fn without_auth_v1() -> ApiResult {
