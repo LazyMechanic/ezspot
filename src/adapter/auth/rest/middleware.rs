@@ -7,15 +7,12 @@ use crate::port::auth::service as auth_service;
 use crate::port::auth::service::Decode;
 
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
-use actix_web::http::Method;
 use actix_web::{web, Error as ActixError, HttpMessage};
 use futures::future::LocalBoxFuture;
 use futures::{future, FutureExt};
-use regex::{Regex, RegexSet};
+use regex::Regex;
 use std::cell::RefCell;
-use std::collections::hash_map::RandomState;
 use std::collections::{HashMap, HashSet};
-use std::convert::TryFrom;
 use std::rc::Rc;
 use std::task;
 

@@ -4,7 +4,6 @@ use crate::adapter::rest_prelude::*;
 use crate::port::auth::service as auth_service;
 use crate::port::auth::service::Encode;
 
-use actix_web::http::{header, HeaderValue};
 use actix_web::web;
 use chrono::Utc;
 
