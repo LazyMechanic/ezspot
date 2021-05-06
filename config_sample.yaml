@@ -34,12 +34,7 @@ logger:
       - stdout
   loggers:
     ezspot:
-      level: example
-      appenders:
-        - stdout
-      additive: false
-    ezspot_lib:
-      level: example
+      level: TRACE
       appenders:
         - stdout
       additive: false
