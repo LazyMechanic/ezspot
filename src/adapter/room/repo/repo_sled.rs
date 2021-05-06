@@ -100,4 +100,32 @@ impl RoomRepo for RoomRepoSled {
 
         return Ok(has);
     }
+
+    async fn delete_client(&self, req: DeleteClientRequest) -> RepoResult<()> {
+        let mut clients: Clients = match self.client_tree.get(req.room_id.to_ne_bytes())? {
+            None => {
+                return Err(RepoError::CommonError(anyhow::anyhow!(
+                    "no room with id={}",
+                    req.room_id
+                )))
+            }
+            Some(v) => serde_json::from_slice(v.as_ref())
+                .map_err(|err| RepoError::CommonError(err.into()))?,
+        };
+
+        if !clients.client_ids.remove(&req.client_id) {
+            return Err(RepoError::CommonError(anyhow::anyhow!(
+                "client with id={} not exists",
+                req.client_id
+            )));
+        }
+
+        let clients_serialized =
+            serde_json::to_vec(&clients).map_err(|err| RepoError::CommonError(err.into()))?;
+
+        self.client_tree
+            .insert(req.room_id.to_ne_bytes(), clients_serialized)?;
+
+        Ok(())
+    }
 }

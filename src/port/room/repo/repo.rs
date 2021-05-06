@@ -9,6 +9,7 @@ pub trait RoomRepo: Send + Sync {
     async fn create_room(&self, req: CreateRoomRequest) -> RepoResult<CreateRoomResponse>;
     async fn add_client(&self, req: AddClientRequest) -> RepoResult<AddClientResponse>;
     async fn has_client(&self, req: HasClientRequest) -> RepoResult<HasClientResponse>;
+    async fn delete_client(&self, req: DeleteClientRequest) -> RepoResult<DeleteClientResponse>;
 }
 
 pub struct CreateRoomRequest {
@@ -34,3 +35,10 @@ pub struct HasClientRequest {
 }
 
 pub type HasClientResponse = bool;
+
+pub struct DeleteClientRequest {
+    pub room_id: RoomId,
+    pub client_id: ClientId,
+}
+
+pub type DeleteClientResponse = ();

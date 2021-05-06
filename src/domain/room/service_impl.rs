@@ -47,6 +47,16 @@ impl<R: RoomRepo> RoomService for RoomServiceImpl<R> {
 
         Ok(())
     }
+
+    async fn disconnect_room(&self, req: DisconnectRoomRequest) -> ServiceResult<()> {
+        let delete_client_req = room_repo::DeleteClientRequest {
+            room_id: req.room_id,
+            client_id: req.client_id,
+        };
+        self.repo.delete_client(delete_client_req).await?;
+
+        Ok(())
+    }
 }
 
 fn generate_password(password_settings: &config::Password) -> ServiceResult<String> {

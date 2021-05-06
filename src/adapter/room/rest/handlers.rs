@@ -7,7 +7,9 @@ use actix_web::web;
 use std::convert::TryInto;
 
 pub fn service_config(cfg: &mut web::ServiceConfig) {
-    cfg.service(create_room).service(connect_room);
+    cfg.service(create_room)
+        .service(connect_room)
+        .service(disconnect_room);
 }
 
 #[actix_web::post("/v1/rooms")]
@@ -36,6 +38,21 @@ async fn connect_room(state: web::Data<State>, jwt: Jwt) -> ApiResult {
     state
         .room_service
         .connect_room(svc_req)
+        .await
+        .map_err(err_with_internal_error)?;
+
+    Ok(HttpResponse::Ok().finish())
+}
+
+#[actix_web::post("/v1/rooms/disconnect")]
+async fn disconnect_room(state: web::Data<State>, jwt: Jwt) -> ApiResult {
+    let svc_req = room_service::DisconnectRoomRequest {
+        room_id: jwt.access_token.room_id,
+        client_id: jwt.access_token.client_id,
+    };
+    state
+        .room_service
+        .disconnect_room(svc_req)
         .await
         .map_err(err_with_internal_error)?;
 

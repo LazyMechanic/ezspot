@@ -6,6 +6,10 @@ use crate::port::ServiceResult;
 pub trait RoomService: Send + Sync {
     async fn create_room(&self, req: CreateRoomRequest) -> ServiceResult<CreateRoomResponse>;
     async fn connect_room(&self, req: ConnectRoomRequest) -> ServiceResult<ConnectRoomResponse>;
+    async fn disconnect_room(
+        &self,
+        req: DisconnectRoomRequest,
+    ) -> ServiceResult<DisconnectRoomResponse>;
 }
 
 pub struct CreateRoomRequest {}
@@ -21,3 +25,10 @@ pub struct ConnectRoomRequest {
 }
 
 pub type ConnectRoomResponse = ();
+
+pub struct DisconnectRoomRequest {
+    pub room_id: RoomId,
+    pub client_id: ClientId,
+}
+
+pub type DisconnectRoomResponse = ();
