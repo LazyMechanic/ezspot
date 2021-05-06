@@ -2,10 +2,11 @@ use std::sync::Arc;
 
 use actix_web::{middleware as actix_middleware, web, App, HttpServer};
 
-use crate::adapter::auth::rest::handlers as auth_handlers;
-use crate::adapter::auth::rest::middleware as auth_middleware;
-use crate::adapter::example::rest::handlers as example_handlers;
-use crate::adapter::health_check::rest::handlers as health_check_handlers;
+use crate::adapter::auth::rest as auth_rest;
+use crate::adapter::example::rest as example_rest;
+use crate::adapter::health_check::rest as health_check_rest;
+use crate::adapter::room::rest as room_rest;
+
 use crate::config;
 use crate::infra::state::State;
 
@@ -33,20 +34,23 @@ pub async fn run(opts: Options) -> std::io::Result<()> {
         App::new()
             // enable logger
             .wrap(actix_middleware::Logger::default())
+            // enable jwt auth via middleware
             .wrap(
-                auth_middleware::JwtAuth::default()
-                    .exclude_regex(".*/auth/login")
-                    .exclude_regex(".*/example.*")
-                    .exclude_regex(".*/health-check.*"),
+                auth_rest::middleware::JwtAuth::default()
+                    .exclude_regex("v[0-9]+/auth/login")
+                    .exclude_regex("v[0-9]+/example")
+                    .exclude_regex("v[0-9]+/health-check")
+                    .exclude_regex(("v[0-9]+/rooms", http::Method::POST)),
             )
             .data(state.clone())
             // limit size of the payload (global configuration)
             .data(web::JsonConfig::default().limit(4096))
             .service(
                 web::scope("/api")
-                    .configure(auth_handlers::service_config)
-                    .configure(health_check_handlers::service_config)
-                    .configure(example_handlers::service_config),
+                    .configure(auth_rest::service_config)
+                    .configure(health_check_rest::service_config)
+                    .configure(example_rest::service_config)
+                    .configure(room_rest::service_config),
             )
     })
     .bind(opts.cfg.addr)?

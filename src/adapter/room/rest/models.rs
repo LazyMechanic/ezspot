@@ -17,14 +17,14 @@ impl TryFrom<room_service::CreateRoomResponse> for CreateRoomResponse {
             None => {
                 return Err(anyhow::anyhow!(
                     "no master password in room id={}",
-                    f.room_cred.id
+                    f.room_id
                 ))
             }
             Some((p, _)) => p,
         };
 
         Ok(Self {
-            room_id: f.room_cred.id,
+            room_id: f.room_id,
             master_password,
         })
     }

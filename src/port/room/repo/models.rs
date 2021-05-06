@@ -1,5 +1,7 @@
+use crate::port::auth::repo::ClientId;
+
 use chrono::NaiveDateTime;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub type RoomId = u64;
 
@@ -11,6 +13,10 @@ pub enum RoomPasswordFeature {
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct RoomCredentials {
-    pub id: RoomId,
     pub passwords: HashMap<String, RoomPasswordFeature>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct Clients {
+    pub client_ids: HashSet<ClientId>,
 }

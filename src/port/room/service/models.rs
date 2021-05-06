@@ -11,6 +11,5 @@ pub enum RoomPasswordFeature {
 
 #[derive(Debug)]
 pub struct RoomCredentials {
-    pub id: RoomId,
     pub passwords: HashMap<String, RoomPasswordFeature>,
 }

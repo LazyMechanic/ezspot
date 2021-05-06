@@ -56,7 +56,10 @@ impl StateBuilder {
 
         let example_tree = sled_db.open_tree("example").expect("open example tree");
         let client_tree = sled_db.open_tree("client").expect("open client tree");
-        let room_tree = sled_db.open_tree("room").expect("open room tree");
+        let room_cred_tree = sled_db.open_tree("room-cred").expect("open room cred tree");
+        let room_client_tree = sled_db
+            .open_tree("room-client")
+            .expect("open room client tree");
 
         let example_service = match self.example_service {
             None => {
@@ -69,7 +72,7 @@ impl StateBuilder {
 
         let auth_service = match self.auth_service {
             None => {
-                let auth_repo = Arc::new(AuthRepoSled::new(client_tree, room_tree.clone()));
+                let auth_repo = Arc::new(AuthRepoSled::new(client_tree, room_cred_tree.clone()));
                 let auth_svc = Arc::new(AuthServiceImpl::new(cfg.auth.clone(), auth_repo));
                 auth_svc
             }
@@ -78,7 +81,7 @@ impl StateBuilder {
 
         let room_service = match self.room_service {
             None => {
-                let room_repo = Arc::new(RoomRepoSled::new(room_tree));
+                let room_repo = Arc::new(RoomRepoSled::new(room_cred_tree, room_client_tree));
                 let room_svc = Arc::new(RoomServiceImpl::new(cfg.room.clone(), room_repo));
                 room_svc
             }

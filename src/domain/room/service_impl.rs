@@ -1,108 +1,52 @@
 use crate::config;
 use crate::domain::local_prelude::*;
-use crate::port::auth::service::ClientId;
 use crate::port::room::repo as room_repo;
 use crate::port::room::repo::RoomRepo;
 use crate::port::room::service::*;
 use crate::port::{ServiceError, ServiceResult};
 
-use std::collections::HashMap;
-
-const MIN_ROOM_ID: RoomId = 100_000;
-const MAX_ROOM_ID: RoomId = 1_000_000;
-
-#[inline]
-fn max_rooms() -> usize {
-    (MAX_ROOM_ID - MIN_ROOM_ID) as usize
-}
-
 pub struct RoomServiceImpl<R: RoomRepo> {
     cfg: config::Room,
     repo: Arc<R>,
-    rooms: RwLock<HashMap<RoomId, Room>>,
-
-    cur_id: Mutex<RoomId>,
 }
-
-struct Room {
-    pub clients: HashMap<ClientId, Client>,
-}
-
-impl Room {
-    pub fn new() -> Self {
-        Self {
-            clients: Default::default(),
-        }
-    }
-}
-
-struct Client {}
 
 impl<R: RoomRepo> RoomServiceImpl<R> {
     pub fn new(cfg: config::Room, repo: Arc<R>) -> Self {
-        Self {
-            cfg,
-            repo,
-            rooms: Default::default(),
-            cur_id: Mutex::new(MIN_ROOM_ID),
-        }
+        Self { cfg, repo }
     }
 }
 
 #[async_trait::async_trait]
 impl<R: RoomRepo> RoomService for RoomServiceImpl<R> {
-    async fn create_room(&self, _req: CreateRoomRequest) -> ServiceResult<CreateRoomResponse> {
-        // Get new room id
-        let room_id = {
-            let rooms = self.rooms.read().await;
-            let mut cur_id = self.cur_id.lock().await;
-            next_free_id(&rooms, &mut cur_id)?
-        };
-
+    async fn create_room(&self, _: CreateRoomRequest) -> ServiceResult<CreateRoomResponse> {
         // Generate master password
         let master_password = generate_password(&self.cfg.password)?;
 
-        let create_room_cred_req = room_repo::CreateRoomCredentialsRequest {
-            room_id,
+        let create_room_req = room_repo::CreateRoomRequest {
+            client_ids: Default::default(),
             room_passwords: vec![(master_password, room_repo::RoomPasswordFeature::OneOff)]
                 .into_iter()
                 .collect(),
         };
-        let create_room_cred_res = self
-            .repo
-            .create_room_credentials(create_room_cred_req)
-            .await?;
+        let create_room_res = self.repo.create_room(create_room_req).await?;
 
-        let room_cred: RoomCredentials = create_room_cred_res.room_cred.into();
-
-        // Add new room
-        self.rooms.write().await.insert(room_id, Room::new());
-
-        let res = CreateRoomResponse { room_cred };
+        let res = CreateRoomResponse {
+            room_id: create_room_res.room_id,
+            room_cred: create_room_res.room_cred.into(),
+        };
 
         Ok(res)
     }
-}
 
-fn next_free_id(rooms: &HashMap<RoomId, Room>, cur_id: &mut RoomId) -> ServiceResult<RoomId> {
-    // If no free rooms
-    if rooms.len() >= max_rooms() {
-        return Err(ServiceError::CommonError(anyhow::anyhow!(
-            "maximum number of rooms reached"
-        )));
+    async fn connect_room(&self, req: ConnectRoomRequest) -> ServiceResult<()> {
+        let add_client_req = room_repo::AddClientRequest {
+            room_id: req.room_id,
+            client_id: req.client_id,
+        };
+        self.repo.add_client(add_client_req).await?;
+
+        Ok(())
     }
-
-    let mut id = next_id(*cur_id);
-    while rooms.contains_key(&id) {
-        id = next_id(*cur_id);
-    }
-
-    Ok(id)
-}
-
-#[inline]
-fn next_id(cur_id: RoomId) -> RoomId {
-    MIN_ROOM_ID + (cur_id - MIN_ROOM_ID + 1) % MAX_ROOM_ID
 }
 
 fn generate_password(password_settings: &config::Password) -> ServiceResult<String> {
@@ -136,7 +80,6 @@ impl From<room_repo::RoomPasswordFeature> for RoomPasswordFeature {
 impl From<room_repo::RoomCredentials> for RoomCredentials {
     fn from(f: room_repo::RoomCredentials) -> Self {
         Self {
-            id: f.id,
             passwords: f
                 .passwords
                 .into_iter()

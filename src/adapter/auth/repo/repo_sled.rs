@@ -4,14 +4,14 @@ use crate::port::{RepoError, RepoResult};
 
 pub struct AuthRepoSled {
     client_tree: sled::Tree,
-    room_tree: sled::Tree,
+    room_cred_tree: sled::Tree,
 }
 
 impl AuthRepoSled {
-    pub fn new(client_tree: sled::Tree, room_tree: sled::Tree) -> Self {
+    pub fn new(client_tree: sled::Tree, room_cred_tree: sled::Tree) -> Self {
         Self {
             client_tree,
-            room_tree,
+            room_cred_tree,
         }
     }
 }
@@ -89,7 +89,7 @@ impl AuthRepo for AuthRepoSled {
         req: GetRoomCredentialsRequest,
     ) -> RepoResult<GetRoomCredentialsResponse> {
         let room_cred: RoomCredentials = match self
-            .room_tree
+            .room_cred_tree
             .get(req.room_id.to_ne_bytes())
             .map_err(RepoError::SledError)?
         {
