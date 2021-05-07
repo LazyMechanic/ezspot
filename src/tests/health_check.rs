@@ -13,9 +13,11 @@ async fn test_get() -> anyhow::Result<()> {
     let req = test::TestRequest::get()
         .uri("/v1/health-check")
         .to_request();
-    let resp = test::call_service(&mut app, req).await;
+    let res = test::call_service(&mut app, req).await;
 
-    assert_eq!(resp.status(), http::StatusCode::OK);
+    assert_eq!(res.status(), http::StatusCode::OK);
+
+    let _: GetHealthCheckResponse = test::read_body_json(res).await;
 
     Ok(())
 }
