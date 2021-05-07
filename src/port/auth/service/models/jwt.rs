@@ -117,8 +117,8 @@ impl Decode for RefreshTokenDecoded {
 }
 
 impl RefreshTokenDecoded {
-    pub fn new(salt: Uuid, exp: NaiveDateTime) -> RefreshTokenDecoded {
-        RefreshTokenDecoded { salt, exp }
+    pub fn new(exp: NaiveDateTime, salt: Uuid) -> RefreshTokenDecoded {
+        RefreshTokenDecoded { exp, salt }
     }
 
     pub fn exp(&self) -> NaiveDateTime {

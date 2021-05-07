@@ -87,8 +87,8 @@ impl<R: AuthRepo> AuthService for AuthServiceImpl<R> {
 
         // Create refresh token
         let refresh_token = RefreshTokenDecoded::new(
-            create_client_res.client.refresh_token_salt,
             create_client_res.client.refresh_token_exp,
+            create_client_res.client.refresh_token_salt,
         );
 
         let res = LoginResponse {
@@ -155,8 +155,8 @@ impl<R: AuthRepo> AuthService for AuthServiceImpl<R> {
 
         // Create refresh token
         let refresh_token = RefreshTokenDecoded::new(
-            create_client_res.client.refresh_token_salt,
             create_client_res.client.refresh_token_exp,
+            create_client_res.client.refresh_token_salt,
         );
 
         let res = RefreshTokensResponse {

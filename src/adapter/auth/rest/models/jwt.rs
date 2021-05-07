@@ -55,7 +55,7 @@ impl From<auth_models::RefreshTokenDecoded> for RefreshTokenDecoded {
 
 impl From<RefreshTokenDecoded> for auth_models::RefreshTokenDecoded {
     fn from(f: RefreshTokenDecoded) -> Self {
-        Self::new(f.salt, f.exp)
+        Self::new(f.exp, f.salt)
     }
 }
 
