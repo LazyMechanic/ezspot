@@ -2,7 +2,6 @@ use crate::adapter::auth::rest::models::*;
 use crate::adapter::auth::rest::REFRESH_TOKEN_COOKIE_NAME;
 use crate::adapter::rest_prelude::*;
 use crate::port::auth::service as auth_service;
-use crate::port::auth::service::Encode;
 
 use actix_web::web;
 use chrono::Utc;
@@ -25,30 +24,32 @@ async fn login(state: web::Data<State>, req: web::Json<LoginRequest>) -> ApiResu
         .await
         .map_err(|err| err_with_status(http::StatusCode::UNAUTHORIZED, err))?;
 
-    let access_token = login_res
-        .jwt
+    let jwt: Jwt = login_res.jwt.into();
+
+    let access_token_encoded = jwt
         .access_token
         .encode(state.auth_service.secret())
         .map_err(AnyhowErrorWrapper::from)
         .map_err(err_with_internal_error)?;
 
-    let refresh_token = login_res
-        .jwt
+    let refresh_token_encoded = jwt
         .refresh_token
         .encode(state.auth_service.secret())
         .map_err(AnyhowErrorWrapper::from)
         .map_err(err_with_internal_error)?;
 
-    let login_res_json = LoginResponse { access_token };
+    let login_res_json = LoginResponse {
+        access_token: access_token_encoded,
+    };
 
     let res = {
         let mut res = HttpResponse::Ok().json(login_res_json);
         res.add_cookie(
-            &actix_web::cookie::Cookie::build(REFRESH_TOKEN_COOKIE_NAME, refresh_token)
+            &actix_web::cookie::Cookie::build(REFRESH_TOKEN_COOKIE_NAME, refresh_token_encoded)
                 .path("/api/v1/auth")
                 .http_only(true)
                 .max_age(time::Duration::seconds(
-                    login_res.jwt.refresh_token.exp().timestamp() - Utc::now().timestamp(),
+                    jwt.refresh_token.exp.timestamp() - Utc::now().timestamp(),
                 ))
                 .finish(),
         )
@@ -87,30 +88,32 @@ async fn refresh_tokens(
         .await
         .map_err(err_with_internal_error)?;
 
-    let access_token = refresh_tokens_res
-        .jwt
+    let jwt: Jwt = refresh_tokens_res.jwt.into();
+
+    let access_token_encoded = jwt
         .access_token
         .encode(state.auth_service.secret())
         .map_err(AnyhowErrorWrapper::from)
         .map_err(err_with_internal_error)?;
 
-    let refresh_token = refresh_tokens_res
-        .jwt
+    let refresh_token_encoded = jwt
         .refresh_token
         .encode(state.auth_service.secret())
         .map_err(AnyhowErrorWrapper::from)
         .map_err(err_with_internal_error)?;
 
-    let refresh_tokens_res_json = RefreshTokensResponse { access_token };
+    let refresh_tokens_res_json = RefreshTokensResponse {
+        access_token: access_token_encoded,
+    };
 
     let res = {
         let mut res = HttpResponse::Ok().json(refresh_tokens_res_json);
         res.add_cookie(
-            &actix_web::cookie::Cookie::build(REFRESH_TOKEN_COOKIE_NAME, refresh_token)
+            &actix_web::cookie::Cookie::build(REFRESH_TOKEN_COOKIE_NAME, refresh_token_encoded)
                 .path("/api/v1/auth")
                 .http_only(true)
                 .max_age(time::Duration::seconds(
-                    refresh_tokens_res.jwt.refresh_token.exp().timestamp() - Utc::now().timestamp(),
+                    jwt.refresh_token.exp.timestamp() - Utc::now().timestamp(),
                 ))
                 .finish(),
         )

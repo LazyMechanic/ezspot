@@ -10,11 +10,9 @@ use chrono::NaiveDateTime;
 #[async_trait::async_trait]
 pub trait AuthRepo: Send + Sync {
     async fn create_client(&self, req: CreateClientRequest) -> RepoResult<CreateClientResponse>;
-
     async fn delete_client(&self, req: DeleteClientRequest) -> RepoResult<DeleteClientResponse>;
-
+    async fn update_client(&self, req: UpdateClientRequest) -> RepoResult<UpdateClientResponse>;
     async fn get_client(&self, req: GetClientRequest) -> RepoResult<GetClientResponse>;
-
     async fn get_room_credentials(
         &self,
         req: GetRoomCredentialsRequest,
@@ -37,6 +35,17 @@ pub struct DeleteClientRequest {
 }
 
 pub struct DeleteClientResponse {
+    pub client: Client,
+}
+
+pub struct UpdateClientRequest {
+    pub client_id: ClientId,
+    pub refresh_token_salt: Option<RefreshTokenSalt>,
+    pub refresh_token_exp: Option<NaiveDateTime>,
+    pub fingerprint: Option<String>,
+}
+
+pub struct UpdateClientResponse {
     pub client: Client,
 }
 

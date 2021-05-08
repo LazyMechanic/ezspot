@@ -225,7 +225,7 @@ async fn test_delete_entry() -> anyhow::Result<()> {
 
         let resp = test::call_service(&mut app, req).await;
 
-        assert_eq!(resp.status(), http::StatusCode::OK, "status code");
+        assert_eq!(resp.status(), http::StatusCode::OK, "create status code");
 
         let resp_body: GetResponse = actix_web::test::read_body_json(resp).await;
 
@@ -239,7 +239,7 @@ async fn test_delete_entry() -> anyhow::Result<()> {
 
     let resp = test::call_service(&mut app, req).await;
 
-    assert_eq!(resp.status(), http::StatusCode::OK, "status code");
+    assert_eq!(resp.status(), http::StatusCode::OK, "delete status code");
 
     let resp_body: DeleteResponse = actix_web::test::read_body_json(resp).await;
 

@@ -4,7 +4,6 @@ use crate::adapter::auth::rest::ACCESS_TOKEN_PREFIX;
 use crate::adapter::auth::rest::REFRESH_TOKEN_COOKIE_NAME;
 use crate::adapter::rest_prelude::*;
 use crate::port::auth::service as auth_service;
-use crate::port::auth::service::Decode;
 
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
 use actix_web::{web, Error as ActixError, HttpMessage};
@@ -279,21 +278,19 @@ async fn auth(req: &ServiceRequest) -> Result<(), ActixError> {
 
     // Decode access token
     let access_token_decoded =
-        auth_service::AccessTokenDecoded::decode(auth_service.secret(), access_token_encoded)
+        AccessTokenDecoded::decode(auth_service.secret(), access_token_encoded)
             .map_err(actix_web::error::ErrorBadRequest)?;
 
     // Decode refresh token
-    let refresh_token_decoded = auth_service::RefreshTokenDecoded::decode(
-        auth_service.secret(),
-        refresh_token_encoded.value(),
-    )
-    .map_err(actix_web::error::ErrorBadRequest)?;
+    let refresh_token_decoded =
+        RefreshTokenDecoded::decode(auth_service.secret(), refresh_token_encoded.value())
+            .map_err(actix_web::error::ErrorBadRequest)?;
 
     // Authorize
     let auth_req = auth_service::AuthorizeRequest {
         jwt: auth_service::Jwt {
-            access_token: access_token_decoded,
-            refresh_token: refresh_token_decoded,
+            access_token: access_token_decoded.into(),
+            refresh_token: refresh_token_decoded.into(),
         },
     };
     let auth_res = auth_service

@@ -35,4 +35,5 @@ impl TryFrom<room_service::CreateRoomResponse> for CreateRoomResponse {
 
 #[derive(Debug, Message)]
 #[rtype(result = "Result<(), ApiError>")]
+#[repr(transparent)]
 pub struct FilePart(pub actix_web::web::Bytes);

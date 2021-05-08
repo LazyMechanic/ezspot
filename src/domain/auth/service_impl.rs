@@ -31,14 +31,14 @@ impl<R: AuthRepo> AuthService for AuthServiceImpl<R> {
 
     async fn authorize(&self, req: AuthorizeRequest) -> ServiceResult<AuthorizeResponse> {
         // If access token expires
-        if Utc::now().naive_utc() >= req.jwt.access_token.exp() {
+        if Utc::now().naive_utc() >= req.jwt.access_token.exp {
             return Err(ServiceError::AuthError(anyhow::anyhow!(
                 "access token expires"
             )));
         }
 
         // If refresh token expires
-        if Utc::now().naive_utc() >= req.jwt.refresh_token.exp() {
+        if Utc::now().naive_utc() >= req.jwt.refresh_token.exp {
             return Err(ServiceError::AuthError(anyhow::anyhow!(
                 "refresh token expires"
             )));
@@ -104,7 +104,7 @@ impl<R: AuthRepo> AuthService for AuthServiceImpl<R> {
     async fn logout(&self, req: LogoutRequest) -> ServiceResult<()> {
         // Delete auth session
         let delete_client_req = auth_repo::DeleteClientRequest {
-            client_id: req.jwt.access_token.client_id(),
+            client_id: req.jwt.access_token.client_id,
         };
         self.repo.delete_client(delete_client_req).await?;
 
@@ -117,12 +117,12 @@ impl<R: AuthRepo> AuthService for AuthServiceImpl<R> {
     ) -> ServiceResult<RefreshTokensResponse> {
         // Remove client
         let delete_client_req = auth_repo::DeleteClientRequest {
-            client_id: req.jwt.access_token.client_id(),
+            client_id: req.jwt.access_token.client_id,
         };
         let delete_client_res = self.repo.delete_client(delete_client_req).await?;
 
         // If refresh token expires
-        if Utc::now().naive_utc() >= req.jwt.refresh_token.exp() {
+        if Utc::now().naive_utc() >= req.jwt.refresh_token.exp {
             return Err(ServiceError::AuthError(anyhow::anyhow!(
                 "refresh token expires"
             )));
@@ -150,7 +150,7 @@ impl<R: AuthRepo> AuthService for AuthServiceImpl<R> {
         let access_token = AccessTokenDecoded::new(
             expires_timestamp(self.cfg.access_expires),
             create_client_res.client.id,
-            req.jwt.access_token.room_id(),
+            req.jwt.access_token.room_id,
         );
 
         // Create refresh token

@@ -25,21 +25,6 @@ pub trait AuthService: Send + Sync {
     ) -> ServiceResult<RefreshTokensResponse>;
 }
 
-pub trait Encode {
-    type Output: AsRef<str>;
-    fn encode<S>(&self, secret: S) -> anyhow::Result<Self::Output>
-    where
-        S: AsRef<str>;
-}
-
-pub trait Decode {
-    type Output;
-    fn decode<S1, S2>(secret: S1, value: S2) -> anyhow::Result<Self::Output>
-    where
-        S1: AsRef<str>,
-        S2: AsRef<str>;
-}
-
 pub struct AuthorizeRequest {
     pub jwt: Jwt,
 }
