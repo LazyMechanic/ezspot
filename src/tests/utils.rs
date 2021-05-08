@@ -57,6 +57,7 @@ impl StateBuilder {
         let example_tree = sled_db.open_tree("example").expect("open example tree");
         let client_tree = sled_db.open_tree("client").expect("open client tree");
         let room_cred_tree = sled_db.open_tree("room-cred").expect("open room cred tree");
+        let room_file_tree = sled_db.open_tree("room-file").expect("open room file tree");
         let room_client_tree = sled_db
             .open_tree("room-client")
             .expect("open room client tree");
@@ -81,7 +82,11 @@ impl StateBuilder {
 
         let room_service = match self.room_service {
             None => {
-                let room_repo = Arc::new(RoomRepoSled::new(room_cred_tree, room_client_tree));
+                let room_repo = Arc::new(RoomRepoSled::new(
+                    room_cred_tree,
+                    room_file_tree,
+                    room_client_tree,
+                ));
                 let room_svc = Arc::new(RoomServiceImpl::new(cfg.room.clone(), room_repo));
                 room_svc
             }

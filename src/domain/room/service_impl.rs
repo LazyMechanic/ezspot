@@ -57,6 +57,22 @@ impl<R: RoomRepo> RoomService for RoomServiceImpl<R> {
 
         Ok(())
     }
+
+    async fn add_file(&self, req: AddFileRequest) -> ServiceResult<AddFileResponse> {
+        let add_file_req = room_repo::AddFileRequest {
+            room_id: req.room_id,
+            file_name: req.file_name,
+            file_size: req.file_size,
+            file_mime_type: req.file_mime_type,
+        };
+        let add_file_res = self.repo.add_file(add_file_req).await?;
+
+        let file = add_file_res.file.into();
+
+        let res = AddFileResponse { file };
+
+        Ok(res)
+    }
 }
 
 fn generate_password(password_settings: &config::Password) -> ServiceResult<String> {
@@ -95,6 +111,17 @@ impl From<room_repo::RoomCredentials> for RoomCredentials {
                 .into_iter()
                 .map(|(p, f)| (p, f.into()))
                 .collect(),
+        }
+    }
+}
+
+impl From<room_repo::File> for File {
+    fn from(f: room_repo::File) -> Self {
+        Self {
+            id: f.id,
+            name: f.name,
+            size: f.size,
+            mime_type: f.mime_type,
         }
     }
 }

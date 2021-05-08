@@ -39,6 +39,7 @@ pub async fn run(cfg: Config) -> anyhow::Result<()> {
     let example_tree = sled_db.open_tree("example")?;
     let client_tree = sled_db.open_tree("client")?;
     let room_cred_tree = sled_db.open_tree("room-cred")?;
+    let room_file_tree = sled_db.open_tree("room-file")?;
     let room_client_tree = sled_db.open_tree("room-client")?;
 
     let example_repo = Arc::new(ExampleRepoSled::new(example_tree));
@@ -47,7 +48,11 @@ pub async fn run(cfg: Config) -> anyhow::Result<()> {
     let auth_repo = Arc::new(AuthRepoSled::new(client_tree, room_cred_tree.clone()));
     let auth_svc = Arc::new(AuthServiceImpl::new(cfg.auth.clone(), auth_repo));
 
-    let room_repo = Arc::new(RoomRepoSled::new(room_cred_tree, room_client_tree));
+    let room_repo = Arc::new(RoomRepoSled::new(
+        room_cred_tree,
+        room_file_tree,
+        room_client_tree,
+    ));
     let room_svc = Arc::new(RoomServiceImpl::new(cfg.room.clone(), room_repo));
 
     let opts = app::rest::Options {

@@ -13,6 +13,7 @@ pub trait RoomService: Send + Sync {
         &self,
         req: DisconnectRoomRequest,
     ) -> ServiceResult<DisconnectRoomResponse>;
+    async fn add_file(&self, req: AddFileRequest) -> ServiceResult<AddFileResponse>;
 }
 
 pub struct CreateRoomRequest {}
@@ -35,3 +36,14 @@ pub struct DisconnectRoomRequest {
 }
 
 pub type DisconnectRoomResponse = ();
+
+pub struct AddFileRequest {
+    pub room_id: RoomId,
+    pub file_name: String,
+    pub file_size: usize,
+    pub file_mime_type: String,
+}
+
+pub struct AddFileResponse {
+    pub file: File,
+}
