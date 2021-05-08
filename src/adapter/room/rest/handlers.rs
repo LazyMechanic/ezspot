@@ -1,15 +1,18 @@
 use crate::adapter::auth::rest::Jwt;
 use crate::adapter::rest_prelude::*;
 use crate::adapter::room::rest::models::*;
+use crate::adapter::room::rest::ws::WsConn;
 use crate::port::room::service as room_service;
 
 use actix_web::web;
+use actix_web_actors::ws;
 use std::convert::TryInto;
 
 pub fn service_config(cfg: &mut web::ServiceConfig) {
     cfg.service(create_room)
         .service(connect_room)
-        .service(disconnect_room);
+        .service(disconnect_room)
+        .service(ws_conn);
 }
 
 #[actix_web::post("/v1/rooms")]
@@ -57,4 +60,14 @@ async fn disconnect_room(state: web::Data<State>, jwt: Jwt) -> ApiResult {
         .map_err(err_with_internal_error)?;
 
     Ok(HttpResponse::Ok().finish())
+}
+
+#[actix_web::get("/v1/rooms/ws")]
+async fn ws_conn(http_req: HttpRequest, stream: web::Payload, jwt: Jwt) -> ApiResult {
+    dbg!(jwt);
+    let resp = ws::start(WsConn::default(), &http_req, stream)
+        .map_err(|err| anyhow::anyhow!("{:?}", err))
+        .map_err(AnyhowErrorWrapper::from)
+        .map_err(err_with_internal_error)?;
+    Ok(resp)
 }

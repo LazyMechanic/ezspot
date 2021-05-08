@@ -1,4 +1,7 @@
+use crate::adapter::rest_prelude::*;
 use crate::port::room::service as room_service;
+
+use actix::prelude::*;
 use std::convert::TryFrom;
 
 pub type RoomId = u64;
@@ -29,3 +32,7 @@ impl TryFrom<room_service::CreateRoomResponse> for CreateRoomResponse {
         })
     }
 }
+
+#[derive(Debug, Message)]
+#[rtype(result = "Result<(), ApiError>")]
+pub struct FilePart(pub actix_web::web::Bytes);
