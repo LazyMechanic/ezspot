@@ -6,7 +6,6 @@ use crate::port::room::service as room_service;
 
 use actix_web::web;
 use actix_web_actors::ws;
-use std::convert::TryInto;
 
 pub fn service_config(cfg: &mut web::ServiceConfig) {
     cfg.service(create_room)
@@ -25,16 +24,32 @@ async fn create_room(state: web::Data<State>) -> ApiResult {
         .await
         .map_err(err_with_internal_error)?;
 
-    let res: CreateRoomResponse = svc_res
-        .try_into()
-        .map_err(AnyhowErrorWrapper::from)
-        .map_err(err_with_internal_error)?;
+    let res = CreateRoomResponse {
+        room_id: svc_res.room_id,
+        master_password: svc_res
+            .room_cred
+            .passwords
+            .into_iter()
+            .next()
+            .map(|(p, _)| p)
+            .ok_or(msg_with_internal_error(format!(
+                "no master password in room id={}",
+                svc_res.room_id
+            )))?,
+    };
 
     Ok(HttpResponse::Ok().json(res))
 }
 
-#[actix_web::post("/v1/rooms/connect")]
-async fn connect_room(state: web::Data<State>, jwt: Jwt) -> ApiResult {
+#[actix_web::post("/v1/rooms/{room_id}/connect")]
+async fn connect_room(
+    state: web::Data<State>,
+    req_path: web::Path<ConnectRoomPathRequest>,
+    jwt: Jwt,
+) -> ApiResult {
+    // Check auth
+    check_room_access(req_path.room_id, &jwt)?;
+
     let svc_req = room_service::ConnectRoomRequest {
         room_id: jwt.access_token.room_id,
         client_id: jwt.access_token.client_id,
@@ -48,8 +63,15 @@ async fn connect_room(state: web::Data<State>, jwt: Jwt) -> ApiResult {
     Ok(HttpResponse::Ok().finish())
 }
 
-#[actix_web::post("/v1/rooms/disconnect")]
-async fn disconnect_room(state: web::Data<State>, jwt: Jwt) -> ApiResult {
+#[actix_web::post("/v1/rooms/{room_id}/disconnect")]
+async fn disconnect_room(
+    state: web::Data<State>,
+    req_path: web::Path<ConnectRoomPathRequest>,
+    jwt: Jwt,
+) -> ApiResult {
+    // Check auth
+    check_room_access(req_path.room_id, &jwt)?;
+
     let svc_req = room_service::DisconnectRoomRequest {
         room_id: jwt.access_token.room_id,
         client_id: jwt.access_token.client_id,
@@ -104,9 +126,16 @@ fn check_room_access(room_id: RoomId, jwt: &Jwt) -> Result<(), ApiError> {
     Ok(())
 }
 
-#[actix_web::get("/v1/rooms/ws")]
-async fn ws_conn(http_req: HttpRequest, stream: web::Payload, jwt: Jwt) -> ApiResult {
-    dbg!(jwt);
+#[actix_web::get("/v1/rooms/{room_id}/ws")]
+async fn ws_conn(
+    req_path: web::Path<WsConnPathRequest>,
+    http_req: HttpRequest,
+    stream: web::Payload,
+    jwt: Jwt,
+) -> ApiResult {
+    // Check auth
+    check_room_access(req_path.room_id, &jwt)?;
+
     let resp = ws::start(WsConn::default(), &http_req, stream)
         .map_err(|err| anyhow::anyhow!("{:?}", err))
         .map_err(AnyhowErrorWrapper::from)

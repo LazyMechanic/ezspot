@@ -2,7 +2,6 @@ use crate::adapter::rest_prelude::*;
 use crate::port::room::service as room_service;
 
 use actix::prelude::*;
-use std::convert::TryFrom;
 
 pub type RoomId = room_service::RoomId;
 pub type FileId = room_service::FileId;
@@ -14,25 +13,14 @@ pub struct CreateRoomResponse {
     pub master_password: String,
 }
 
-impl TryFrom<room_service::CreateRoomResponse> for CreateRoomResponse {
-    type Error = anyhow::Error;
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct ConnectRoomPathRequest {
+    pub room_id: RoomId,
+}
 
-    fn try_from(f: room_service::CreateRoomResponse) -> Result<Self, Self::Error> {
-        let master_password = match f.room_cred.passwords.into_iter().next() {
-            None => {
-                return Err(anyhow::anyhow!(
-                    "no master password in room id={}",
-                    f.room_id
-                ))
-            }
-            Some((p, _)) => p,
-        };
-
-        Ok(Self {
-            room_id: f.room_id,
-            master_password,
-        })
-    }
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct DisconnectRoomPathRequest {
+    pub room_id: RoomId,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
@@ -50,6 +38,11 @@ pub struct AddFileBodyRequest {
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct AddFileResponse {
     pub file: File,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct WsConnPathRequest {
+    pub room_id: RoomId,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]

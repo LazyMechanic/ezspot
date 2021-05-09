@@ -88,7 +88,10 @@ async fn test_connect_room() -> anyhow::Result<()> {
 
     // Connect
     let connect_req = test::TestRequest::post()
-        .uri("/v1/rooms/connect")
+        .uri(&format!(
+            "/v1/rooms/{}/connect",
+            create_room_resp_body.room_id
+        ))
         .header(ACCESS_TOKEN_HEADER_NAME, login_resp_body.access_token)
         .cookie(cookie)
         .to_request();
@@ -165,7 +168,10 @@ async fn test_disconnect_room() -> anyhow::Result<()> {
 
     // Connect
     let connect_req = test::TestRequest::post()
-        .uri("/v1/rooms/connect")
+        .uri(&format!(
+            "/v1/rooms/{}/connect",
+            create_room_resp_body.room_id
+        ))
         .header(
             ACCESS_TOKEN_HEADER_NAME,
             login_resp_body.access_token.clone(),
@@ -182,7 +188,10 @@ async fn test_disconnect_room() -> anyhow::Result<()> {
 
     // Disconnect
     let disconnect_req = test::TestRequest::post()
-        .uri("/v1/rooms/disconnect")
+        .uri(&format!(
+            "/v1/rooms/{}/disconnect",
+            create_room_resp_body.room_id
+        ))
         .header(ACCESS_TOKEN_HEADER_NAME, login_resp_body.access_token)
         .cookie(cookie)
         .to_request();
@@ -259,7 +268,10 @@ async fn test_add_file() -> anyhow::Result<()> {
 
     // Connect
     let connect_req = test::TestRequest::post()
-        .uri("/v1/rooms/connect")
+        .uri(&format!(
+            "/v1/rooms/{}/connect",
+            create_room_resp_body.room_id
+        ))
         .header(
             ACCESS_TOKEN_HEADER_NAME,
             login_resp_body.access_token.clone(),
