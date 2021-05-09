@@ -22,55 +22,72 @@ impl<R: RoomRepo> RoomService for RoomServiceImpl<R> {
         // Generate master password
         let master_password = generate_password(&self.cfg.password)?;
 
-        let create_room_req = room_repo::CreateRoomRequest {
+        let repo_req = room_repo::CreateRoomRequest {
             client_ids: Default::default(),
             room_passwords: vec![(master_password, room_repo::RoomPasswordFeature::OneOff)]
                 .into_iter()
                 .collect(),
         };
-        let create_room_res = self.repo.create_room(create_room_req).await?;
+        let repo_res = self.repo.create_room(repo_req).await?;
 
         let res = CreateRoomResponse {
-            room_id: create_room_res.room_id,
-            room_cred: create_room_res.room_cred.into(),
+            room_id: repo_res.room_id,
+            room_cred: repo_res.room_cred.into(),
         };
 
         Ok(res)
     }
 
     async fn connect_room(&self, req: ConnectRoomRequest) -> ServiceResult<()> {
-        let add_client_req = room_repo::AddClientRequest {
+        let repo_req = room_repo::AddClientRequest {
             room_id: req.room_id,
             client_id: req.client_id,
         };
-        self.repo.add_client(add_client_req).await?;
+        self.repo.add_client(repo_req).await?;
 
         Ok(())
     }
 
     async fn disconnect_room(&self, req: DisconnectRoomRequest) -> ServiceResult<()> {
-        let delete_client_req = room_repo::DeleteClientRequest {
+        let repo_req = room_repo::DeleteClientRequest {
             room_id: req.room_id,
             client_id: req.client_id,
         };
-        self.repo.delete_client(delete_client_req).await?;
+        self.repo.delete_client(repo_req).await?;
 
         Ok(())
     }
 
     async fn add_file(&self, req: AddFileRequest) -> ServiceResult<AddFileResponse> {
-        let add_file_req = room_repo::AddFileRequest {
+        let repo_req = room_repo::AddFileRequest {
             room_id: req.room_id,
             file_name: req.file_name,
             file_size: req.file_size,
             file_mime_type: req.file_mime_type,
             file_source_client_id: req.file_source_client_id,
         };
-        let add_file_res = self.repo.add_file(add_file_req).await?;
+        let repo_res = self.repo.add_file(repo_req).await?;
 
-        let file = add_file_res.file.into();
+        let file = repo_res.file.into();
 
         let res = AddFileResponse { file };
+
+        Ok(res)
+    }
+
+    async fn get_files(&self, req: GetFilesRequest) -> ServiceResult<GetFilesResponse> {
+        let repo_req = room_repo::GetFilesRequest {
+            room_id: req.room_id,
+        };
+        let repo_res = self.repo.get_files(repo_req).await?;
+
+        let files = repo_res
+            .files
+            .into_iter()
+            .map(|(k, v)| (k, v.into()))
+            .collect();
+
+        let res = GetFilesResponse { files };
 
         Ok(res)
     }

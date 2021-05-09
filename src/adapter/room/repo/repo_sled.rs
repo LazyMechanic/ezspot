@@ -193,6 +193,29 @@ impl RoomRepo for RoomRepoSled {
         Ok(res)
     }
 
+    async fn get_files(&self, req: GetFilesRequest) -> RepoResult<GetFilesResponse> {
+        let files: models_sled::Files = match self.files_tree.get(req.room_id.to_ne_bytes())? {
+            None => {
+                return Err(RepoError::CommonError(anyhow::anyhow!(
+                    "no room with id={}",
+                    req.room_id
+                )))
+            }
+            Some(v) => bincode::deserialize(v.as_ref())
+                .map_err(|err| RepoError::CommonError(err.into()))?,
+        };
+
+        let files = files
+            .files
+            .into_iter()
+            .map(|(k, v)| (k, v.into()))
+            .collect();
+
+        let res = GetFilesResponse { files };
+
+        Ok(res)
+    }
+
     async fn get_room_credentials(
         &self,
         req: GetRoomCredentialsRequest,

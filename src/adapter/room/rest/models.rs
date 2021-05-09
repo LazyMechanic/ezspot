@@ -2,6 +2,7 @@ use crate::adapter::rest_prelude::*;
 use crate::port::room::service as room_service;
 
 use actix::prelude::*;
+use std::collections::HashMap;
 
 pub type RoomId = room_service::RoomId;
 pub type FileId = room_service::FileId;
@@ -38,6 +39,16 @@ pub struct AddFileBodyRequest {
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct AddFileResponse {
     pub file: File,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct GetFilesPathRequest {
+    pub room_id: RoomId,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct GetFilesResponse {
+    pub files: HashMap<FileId, File>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]

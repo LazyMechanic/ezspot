@@ -12,6 +12,7 @@ pub fn service_config(cfg: &mut web::ServiceConfig) {
         .service(connect_room)
         .service(disconnect_room)
         .service(add_file)
+        .service(get_files)
         .service(ws_conn);
 }
 
@@ -29,13 +30,15 @@ async fn create_room(state: web::Data<State>) -> ApiResult {
         master_password: svc_res
             .room_cred
             .passwords
-            .into_iter()
+            .iter()
             .next()
-            .map(|(p, _)| p)
-            .ok_or(msg_with_internal_error(format!(
-                "no master password in room id={}",
-                svc_res.room_id
-            )))?,
+            .map(|(p, _)| p.clone())
+            .ok_or_else(|| {
+                msg_with_internal_error(format!(
+                    "no master password in room id={}",
+                    svc_res.room_id
+                ))
+            })?,
     };
 
     Ok(HttpResponse::Ok().json(res))
@@ -110,6 +113,35 @@ async fn add_file(
 
     let res = AddFileResponse {
         file: svc_res.file.into(),
+    };
+
+    Ok(HttpResponse::Ok().json(res))
+}
+
+#[actix_web::get("/v1/rooms/{room_id}/files")]
+async fn get_files(
+    state: web::Data<State>,
+    req_path: web::Path<GetFilesPathRequest>,
+    jwt: Jwt,
+) -> ApiResult {
+    // Check auth
+    check_room_access(req_path.room_id, &jwt)?;
+
+    let svc_req = room_service::GetFilesRequest {
+        room_id: req_path.room_id,
+    };
+    let svc_res = state
+        .room_service
+        .get_files(svc_req)
+        .await
+        .map_err(err_with_internal_error)?;
+
+    let res = GetFilesResponse {
+        files: svc_res
+            .files
+            .into_iter()
+            .map(|(k, v)| (k, v.into()))
+            .collect(),
     };
 
     Ok(HttpResponse::Ok().json(res))

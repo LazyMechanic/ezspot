@@ -3,6 +3,7 @@ pub mod models;
 pub use models::*;
 
 use crate::port::ServiceResult;
+use std::collections::HashMap;
 
 #[async_trait::async_trait]
 pub trait RoomService: Send + Sync {
@@ -13,6 +14,7 @@ pub trait RoomService: Send + Sync {
         req: DisconnectRoomRequest,
     ) -> ServiceResult<DisconnectRoomResponse>;
     async fn add_file(&self, req: AddFileRequest) -> ServiceResult<AddFileResponse>;
+    async fn get_files(&self, req: GetFilesRequest) -> ServiceResult<GetFilesResponse>;
 }
 
 pub struct CreateRoomRequest {}
@@ -46,4 +48,12 @@ pub struct AddFileRequest {
 
 pub struct AddFileResponse {
     pub file: File,
+}
+
+pub struct GetFilesRequest {
+    pub room_id: RoomId,
+}
+
+pub struct GetFilesResponse {
+    pub files: HashMap<FileId, File>,
 }

@@ -13,6 +13,7 @@ pub trait RoomRepo: Send + Sync {
     async fn has_client(&self, req: HasClientRequest) -> RepoResult<HasClientResponse>;
     async fn delete_client(&self, req: DeleteClientRequest) -> RepoResult<DeleteClientResponse>;
     async fn add_file(&self, req: AddFileRequest) -> RepoResult<AddFileResponse>;
+    async fn get_files(&self, req: GetFilesRequest) -> RepoResult<GetFilesResponse>;
     async fn get_room_credentials(
         &self,
         req: GetRoomCredentialsRequest,
@@ -60,6 +61,14 @@ pub struct AddFileRequest {
 
 pub struct AddFileResponse {
     pub file: File,
+}
+
+pub struct GetFilesRequest {
+    pub room_id: RoomId,
+}
+
+pub struct GetFilesResponse {
+    pub files: HashMap<FileId, File>,
 }
 
 pub struct GetRoomCredentialsRequest {
