@@ -1,3 +1,5 @@
+pub use crate::port::auth::repo::ClientId;
+
 use chrono::NaiveDateTime;
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -22,4 +24,5 @@ pub struct File {
     pub name: String,
     pub size: usize,
     pub mime_type: String,
+    pub source_client_id: ClientId,
 }

@@ -62,6 +62,17 @@ impl RoomRepo for RoomRepoSled {
         self.clients_tree
             .insert(room_id.to_ne_bytes(), new_clients_serialized)?;
 
+        // Create room files
+        let new_files = models_sled::Files {
+            files: Default::default(),
+        };
+
+        let new_files_serialized =
+            bincode::serialize(&new_files).map_err(|err| RepoError::CommonError(err.into()))?;
+
+        self.files_tree
+            .insert(room_id.to_ne_bytes(), new_files_serialized)?;
+
         let res = CreateRoomResponse {
             room_id,
             room_cred: new_cred.into(),
@@ -166,6 +177,7 @@ impl RoomRepo for RoomRepoSled {
             name: req.file_name,
             size: req.file_size,
             mime_type: req.file_mime_type,
+            source_client_id: req.file_source_client_id,
         };
 
         files.files.insert(file.id, file.clone());

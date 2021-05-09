@@ -2,10 +2,6 @@ use crate::port::room::repo as room_repo;
 
 use chrono::NaiveDateTime;
 use std::collections::{HashMap, HashSet};
-use uuid::Uuid;
-
-pub type FileId = Uuid;
-pub type ClientId = Uuid;
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Hash, Eq, PartialEq, Clone)]
 pub enum RoomPasswordFeature {
@@ -66,10 +62,11 @@ impl From<room_repo::RoomCredentials> for RoomCredentials {
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct File {
-    pub id: FileId,
+    pub id: room_repo::FileId,
     pub name: String,
     pub size: usize,
     pub mime_type: String,
+    pub source_client_id: room_repo::ClientId,
 }
 
 impl From<File> for room_repo::File {
@@ -79,6 +76,7 @@ impl From<File> for room_repo::File {
             name: f.name,
             size: f.size,
             mime_type: f.mime_type,
+            source_client_id: f.source_client_id,
         }
     }
 }
@@ -90,16 +88,17 @@ impl From<room_repo::File> for File {
             name: f.name,
             size: f.size,
             mime_type: f.mime_type,
+            source_client_id: f.source_client_id,
         }
     }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct Clients {
-    pub client_ids: HashSet<ClientId>,
+    pub client_ids: HashSet<room_repo::ClientId>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct Files {
-    pub files: HashMap<FileId, File>,
+    pub files: HashMap<room_repo::FileId, File>,
 }

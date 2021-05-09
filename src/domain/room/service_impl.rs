@@ -64,6 +64,7 @@ impl<R: RoomRepo> RoomService for RoomServiceImpl<R> {
             file_name: req.file_name,
             file_size: req.file_size,
             file_mime_type: req.file_mime_type,
+            file_source_client_id: req.file_source_client_id,
         };
         let add_file_res = self.repo.add_file(add_file_req).await?;
 
@@ -122,6 +123,7 @@ impl From<room_repo::File> for File {
             name: f.name,
             size: f.size,
             mime_type: f.mime_type,
+            source_client_id: f.source_client_id,
         }
     }
 }

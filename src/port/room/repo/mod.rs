@@ -2,7 +2,6 @@ pub mod models;
 
 pub use models::*;
 
-use crate::port::auth::repo::ClientId;
 use crate::port::RepoResult;
 
 use std::collections::{HashMap, HashSet};
@@ -56,6 +55,7 @@ pub struct AddFileRequest {
     pub file_name: String,
     pub file_size: usize,
     pub file_mime_type: String,
+    pub file_source_client_id: ClientId,
 }
 
 pub struct AddFileResponse {
